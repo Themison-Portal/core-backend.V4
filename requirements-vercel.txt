@@ -1,7 +1,6 @@
 fastapi[standard]
 uvicorn
 python-dotenv
-supabase
 python-multipart
 openai
 sqlalchemy

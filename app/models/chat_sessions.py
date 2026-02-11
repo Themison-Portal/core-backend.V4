@@ -26,7 +26,8 @@ class ChatSession(Base):
     title: Mapped[str] = Column(String(255))
     created_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
+    trial_id: Mapped[UUID] = Column(UUID(as_uuid=True), nullable=True)
+
     # Relationship to messages
     messages: Mapped[List[ChatMessage]] = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
     

@@ -1,89 +1,95 @@
 """
-This module contains the authentication dependencies.
+Authentication dependencies — Auth0 JWT verification.
 """
-from typing import Any, Dict, Optional
+
+import logging
+from typing import Any, Dict
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.supabase_client import supabase_client
+from app.core.auth0 import verify_auth0_token
+from app.dependencies.db import get_db
+from app.models.members import Member
+from app.models.profiles import Profile
 
-import logging
-
-"""
-Create a Supabase client.
-"""
+logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
-"""
-Dependency to get current authenticated user information.
-"""
+
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> Dict[str, Any]:
     """
-    Dependency to get current authenticated user information.
-    Use this when you need access to user data in your route.
+    Verify Auth0 JWT and return basic user info.
+
+    Returns dict with ``id`` (profile UUID), ``email``, ``auth0_sub``.
     """
     token = credentials.credentials
-    
-    supabase = supabase_client()
 
     try:
-        user_response = supabase.auth.get_user(token)
-        if not user_response or not user_response.user:
-            logging.error("Invalid user response from Supabase.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        # Return user data in a consistent format
-        user = user_response.user
-        return {
-            "id": user.id,
-            "email": user.email,
-            "user_metadata": user.user_metadata or {},
-            "app_metadata": user.app_metadata or {},
-            "aud": user.aud,
-            "created_at": user.created_at,
-            "updated_at": user.updated_at
-        }
-    except HTTPException:
-        logging.exception("HTTPException occurred while getting user information.")
-        raise
-    except Exception as e:
-        logging.exception("Exception occurred while getting user information.")
+        payload = await verify_auth0_token(token)
+    except ValueError as e:
+        logger.error("Auth0 token verification failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Failed to get user information: {str(e)}",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-"""
-Dependency to get just the current user ID.
-"""
+    return {
+        "id": payload.get("sub"),
+        "email": payload.get("email") or payload.get(
+            "https://themison.com/email", ""
+        ),
+        "auth0_sub": payload.get("sub"),
+    }
+
+
+async def get_current_member(
+    user: Dict[str, Any] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Member:
+    """
+    Resolve the Auth0 user to a Member record (carries organization_id for scoping).
+
+    Looks up profiles by email, then members by profile_id.
+    Raises 403 if no member record exists.
+    """
+    email = user.get("email", "")
+
+    # Find profile by email
+    result = await db.execute(
+        select(Profile).where(Profile.email == email)
+    )
+    profile = result.scalars().first()
+
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No profile found for this account",
+        )
+
+    # Find member by profile_id
+    result = await db.execute(
+        select(Member).where(Member.profile_id == profile.id)
+    )
+    member = result.scalars().first()
+
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No organization membership found for this account",
+        )
+
+    return member
+
+
 async def get_current_user_id(
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ) -> str:
-    """
-    Dependency to get just the current user ID.
-    Use this when you only need the user ID for operations.
-    """
+    """Return just the current user's Auth0 sub claim."""
     return current_user["id"]
-
-# Legacy support - remove once migration is complete
-"""
-Legacy support - remove once migration is complete.
-"""
-class AuthDependency:
-    @staticmethod
-    async def verify_jwt(credentials: HTTPAuthorizationCredentials = Depends(security)):
-        """Legacy method - use verify_bearer_token or get_current_user instead"""
-        # This maintains backward compatibility
-        logging.warning("Using legacy AuthDependency.verify_jwt; please migrate to get_current_user or verify_bearer_token.")
-        return await get_current_user(credentials)
-
-auth = AuthDependency()

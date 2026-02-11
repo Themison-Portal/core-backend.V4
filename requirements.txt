@@ -2,7 +2,6 @@
 fastapi[standard]
 uvicorn
 python-dotenv
-supabase
 python-multipart
 numpy
 huggingface-hub
@@ -23,6 +22,9 @@ langchain_text_splitters
 langgraph
 langsmith
 pypdf
+python-jose[cryptography]>=3.3.0
+httpx>=0.27.0
+google-cloud-storage>=2.0.0
 sqlalchemy
 alembic
 pydantic

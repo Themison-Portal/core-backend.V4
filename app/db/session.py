@@ -19,7 +19,7 @@ Create an async engine for the database.
 if settings:
     try:
         engine = create_async_engine(
-            settings.supabase_db_url,
+            settings.database_url,
             pool_size=10,
             max_overflow=20,
             pool_pre_ping=True,

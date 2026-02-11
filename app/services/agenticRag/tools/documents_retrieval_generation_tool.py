@@ -2,11 +2,15 @@
 
 from typing import Any, Dict, List
 
+import json as _json
+
 import numpy as np
+import psycopg2
+import psycopg2.extras
 from langchain.tools import tool
 
+from app.config import get_settings
 from app.core.openai import embedding_client, llm
-from app.core.supabase_client import supabase_client
 from app.services.utils.preprocessing import preprocess_text
 
 
@@ -233,11 +237,27 @@ def documents_retrieval_generation_tool(
         }
 
         t2 = time.time()
-        print("🔍 Searching Supabase vector database...")
-        result = supabase_client().rpc("hybrid_search", rpc_params).execute()
+        print("🔍 Searching vector database...")
+        settings = get_settings()
+        sync_url = settings.database_url.replace(
+            "postgresql+asyncpg://", "postgresql://"
+        )
+        conn = psycopg2.connect(sync_url)
+        try:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                "SELECT * FROM hybrid_search(%s, %s::vector, %s, %s)",
+                (
+                    rpc_params["query_text"],
+                    str(rpc_params["query_embedding"]),
+                    rpc_params["match_count"],
+                    rpc_params["document_ids"],
+                ),
+            )
+            data = [dict(row) for row in cur.fetchall()]
+        finally:
+            conn.close()
         print(f"⏱️  Hybrid search took: {time.time() - t2:.2f}s")
-
-        data = result.data if hasattr(result, "data") else []
 
         retrieved_docs = _ensure_serializable(data or [])
 

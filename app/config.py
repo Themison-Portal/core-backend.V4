@@ -11,16 +11,24 @@ class Settings(BaseSettings):
     Application settings
     """
 
-    supabase_url: str
-    supabase_service_key: str
     openai_api_key: str
     anthropic_api_key: str  # Required for Claude Opus 4.5
-    supabase_db_url: str
-    supabase_anon_key: str = ""  # Optional
-    supabase_db_password: str = ""  # Optional
+    database_url: str  # PostgreSQL connection (asyncpg format)
     redis_url: str = ""
     frontend_url: str = "http://localhost:3000"  # Optional with default
     upload_api_key: str = ""  # API key for upload endpoint (X-API-KEY header)
+
+    # Auth0 configuration
+    auth0_domain: str = ""
+    auth0_audience: str = ""
+    auth0_client_id: str = ""
+    auth0_client_secret: str = ""
+
+    # Google Cloud Storage configuration
+    gcs_project_id: str = ""
+    gcs_bucket_trial_documents: str = ""
+    gcs_bucket_patient_documents: str = ""
+    gcs_credentials_path: str = ""
 
     # Semantic cache configuration
     semantic_cache_similarity_threshold: float = 0.90  # Cosine similarity threshold for cache hits

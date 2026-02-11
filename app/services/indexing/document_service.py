@@ -18,7 +18,6 @@ from app.core.openai import embedding_client
 from app.core.storage import StorageProvider
 from app.db.session import engine
 from app.models.base import Base
-from app.models.chunks import DocumentChunk
 from app.models.chunks_docling import DocumentChunkDocling
 from app.models.documents import Document as DocumentTable
 from app.services.interfaces.document_service import IDocumentService
@@ -155,60 +154,6 @@ class DocumentService(IDocumentService):
             raise RuntimeError(f"Failed to process document Docling chunks: {str(e)}")
                 
 
-    async def insert_document_with_chunks(
-        self,
-        title: str, 
-        document_id: UUID,  # Existing document ID from frontend
-        content: str,
-        chunks: List[Document],
-        embeddings: List[List[float]],
-        metadata: Dict[str, Any] = None,
-        user_id: UUID = None
-    ) -> DocumentResponse:
-        """
-        Process existing document and add chunks with embeddings.
-        """
-        
-        await self.ensure_tables_exist()
-        
-        try:
-            # Find existing document that frontend already created
-            document = await self.db.get(DocumentTable, document_id)
-            if not document:
-                raise ValueError(f"Document {document_id} not found. Frontend should create it first.")
-                        
-            # Document already exists, no need to update non-existent columns
-            # Just proceed to add chunks
-                                    
-            # Add chunks that reference the existing document
-            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-
-                chunk_record = DocumentChunk(
-                    id=uuid4(),
-                    document_id=document.id,  # Reference existing document
-                    content=chunk.page_content,
-                    chunk_index=i,
-                    chunk_metadata={**chunk.metadata, "chunk_index": i},
-                    embedding=embedding,
-                    created_at=datetime.now()
-                )
-                self.db.add(chunk_record)  # Add NEW chunk
-            
-            await self.db.commit()
-            await self.db.refresh(document)
-            
-            return DocumentResponse.model_validate(document)
-        
-        except ValueError as e:
-            await self.db.rollback()
-            raise e  # Re-raise ValueError as-is
-        except IntegrityError as e:
-            await self.db.rollback()
-            raise ValueError(f"Database integrity error: {str(e)}")
-        except Exception as e:
-            await self.db.rollback()
-            raise RuntimeError(f"Failed to process document chunks: {str(e)}")
-    
     async def parse_pdf_with_page_info(self, document_url: str, chunk_size: int = 750) -> Dict[str, Any]:
         """
         Extract text content from PDF file with precise page boundaries and TOC detection.
