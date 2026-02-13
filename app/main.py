@@ -12,7 +12,6 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes.auth import router as auth_router
 from app.api.routes.query import router as query_router
 from app.api.routes.upload import router as upload_router
-from app.dependencies.auth import auth
 
 # Storage routes
 from app.api.routes.storage.storage import router as storage_router

@@ -5,7 +5,7 @@ Authentication routes
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.auth import get_current_member, auth
+from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
 from app.models.members import Member
 

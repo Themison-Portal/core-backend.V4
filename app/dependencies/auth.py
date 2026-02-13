@@ -3,13 +3,14 @@ Authentication dependencies — Auth0 JWT verification.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.auth0 import verify_auth0_token
 from app.dependencies.db import get_db
 from app.models.members import Member
@@ -17,17 +18,38 @@ from app.models.profiles import Profile
 
 logger = logging.getLogger(__name__)
 
-security = HTTPBearer()
+# Make HTTPBearer optional when auth is disabled
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> Dict[str, Any]:
     """
     Verify Auth0 JWT and return basic user info.
 
     Returns dict with ``id`` (profile UUID), ``email``, ``auth0_sub``.
+
+    If AUTH_DISABLED=true in .env, returns a mock test user.
     """
+    settings = get_settings()
+
+    # Bypass Auth0 when disabled (for testing)
+    if settings.auth_disabled:
+        logger.warning("Auth0 disabled - using mock test user")
+        return {
+            "id": "test-user-id",
+            "email": "test@themison.com",
+            "auth0_sub": "auth0|test-user-id",
+        }
+
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token = credentials.credentials
 
     try:
@@ -58,7 +80,23 @@ async def get_current_member(
 
     Looks up profiles by email, then members by profile_id.
     Raises 403 if no member record exists.
+
+    If AUTH_DISABLED=true, returns first member in database (for testing).
     """
+    settings = get_settings()
+
+    # Bypass member lookup when auth is disabled (for testing)
+    if settings.auth_disabled:
+        logger.warning("Auth0 disabled - returning first available member")
+        result = await db.execute(select(Member).limit(1))
+        member = result.scalars().first()
+        if not member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No members in database. Create test data first.",
+            )
+        return member
+
     email = user.get("email", "")
 
     # Find profile by email

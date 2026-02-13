@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     auth0_audience: str = ""
     auth0_client_id: str = ""
     auth0_client_secret: str = ""
+    auth_disabled: bool = False  # Set to True to bypass Auth0 for testing
 
     # Google Cloud Storage configuration
     gcs_project_id: str = ""
