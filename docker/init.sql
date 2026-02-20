@@ -373,6 +373,7 @@ CREATE TABLE IF NOT EXISTS document_chunks_docling (
     page_number INTEGER NOT NULL,
     chunk_metadata JSONB,
     embedding vector(1536),
+    embedding_large vector(2000),
     content_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
     contextual_summary TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -398,6 +399,10 @@ CREATE TABLE IF NOT EXISTS semantic_cache_responses (
 -- Vector search indexes (HNSW for fast ANN search)
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding_hnsw
 ON document_chunks_docling USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
+
+CREATE INDEX IF NOT EXISTS idx_chunks_embedding_large_hnsw
+ON document_chunks_docling USING hnsw (embedding_large vector_cosine_ops)
 WITH (m = 16, ef_construction = 64);
 
 CREATE INDEX IF NOT EXISTS idx_semantic_cache_embedding_hnsw
