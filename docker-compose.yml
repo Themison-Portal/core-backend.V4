@@ -36,6 +36,34 @@ services:
       timeout: 5s
       retries: 5
 
+  # RAG gRPC Microservice
+  rag-service:
+    build:
+      context: ../../rag-service
+      dockerfile: Dockerfile
+    container_name: themison-rag-service
+    restart: unless-stopped
+    ports:
+      - "50051:50051"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/postgres
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GRPC_PORT: 50051
+      GRPC_MAX_WORKERS: 10
+      HYBRID_SEARCH_ENABLED: "true"
+      SEMANTIC_CACHE_SIMILARITY_THRESHOLD: "0.90"
+      LLM_MODEL: "claude-sonnet-4-20250514"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import grpc; channel = grpc.insecure_channel('localhost:50051'); grpc.channel_ready_future(channel).result(timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # Supabase Studio (optional - database GUI)
   studio:
     image: supabase/studio:latest

@@ -225,3 +225,108 @@ def mock_db_session():
     mock_session.execute.return_value = mock_result
 
     return mock_session
+
+
+# --- gRPC Client Fixtures ---
+
+@pytest.fixture
+def mock_rag_grpc_client():
+    """
+    Create a mock gRPC RAG client for testing.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+    from uuid import uuid4
+
+    mock_client = MagicMock()
+
+    # Mock ingest_pdf as async generator
+    async def mock_ingest_pdf(*args, **kwargs):
+        yield {
+            "stage": "DOWNLOADING",
+            "progress_percent": 20,
+            "message": "Downloading PDF...",
+            "result": None
+        }
+        yield {
+            "stage": "COMPLETE",
+            "progress_percent": 100,
+            "message": "Ingestion complete!",
+            "result": {
+                "success": True,
+                "document_id": str(uuid4()),
+                "status": "ready",
+                "chunks_count": 10,
+                "created_at": "2024-01-01T00:00:00"
+            }
+        }
+
+    mock_client.ingest_pdf = mock_ingest_pdf
+
+    mock_client.query = AsyncMock(return_value={
+        "result": {
+            "response": "Based on the document, the inclusion criteria require patients to be 18 years or older.",
+            "sources": [
+                {
+                    "name": "Test Protocol.pdf",
+                    "page": 5,
+                    "section": "Inclusion Criteria",
+                    "exactText": "Patients must be 18 years or older",
+                    "bboxes": [[10, 20, 200, 40]],
+                    "relevance": "high"
+                }
+            ]
+        },
+        "timing": {
+            "embedding_ms": 15.5,
+            "retrieval_total_ms": 45.2,
+            "llm_call_ms": 1250.0,
+            "generation_total_ms": 1350.7,
+            "original_chunk_count": 8,
+            "compressed_chunk_count": 5,
+            "embedding_cache_hit": False,
+            "semantic_cache_hit": False,
+            "chunk_cache_hit": False,
+            "response_cache_hit": False,
+            "semantic_cache_similarity": 0
+        }
+    })
+
+    mock_client.get_highlighted_pdf = AsyncMock(return_value=b"%PDF-1.4 highlighted content")
+
+    mock_client.invalidate_document = AsyncMock(return_value={
+        "success": True,
+        "chunks_deleted": 42,
+        "cache_entries_deleted": 5
+    })
+
+    mock_client.health_check = AsyncMock(return_value={
+        "status": "SERVING",
+        "version": "0.1.0",
+        "components": [
+            {"name": "database", "healthy": True, "message": "Connected"},
+        ]
+    })
+
+    mock_client.close = AsyncMock()
+
+    return mock_client
+
+
+@pytest.fixture
+def sample_query_request():
+    """Create a sample query request for testing."""
+    return {
+        "query": "What are the inclusion criteria?",
+        "document_id": "00000000-0000-0000-0000-000000000001",
+        "document_name": "Test Protocol.pdf"
+    }
+
+
+@pytest.fixture
+def sample_upload_request():
+    """Create a sample upload request for testing."""
+    return {
+        "document_url": "https://storage.example.com/test-protocol.pdf",
+        "document_id": "00000000-0000-0000-0000-000000000001",
+        "chunk_size": 750
+    }

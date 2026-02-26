@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     contextual_retrieval_enabled: bool = False
     contextual_context_window: int = 3  # Include N surrounding chunks for context
 
+    # gRPC RAG Service configuration
+    rag_service_address: str = "localhost:50051"  # Address of RAG gRPC service
+    use_grpc_rag: bool = False  # Feature flag for gradual rollout
+
     class Config:
         """
         Configuration for the application settings

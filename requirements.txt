@@ -43,6 +43,10 @@ docling
 # --- Reranking packages ---
 cohere>=5.0.0
 
+# --- gRPC packages (for RAG microservice communication) ---
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+
 # --- Testing packages ---
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
