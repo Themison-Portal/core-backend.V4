@@ -66,13 +66,37 @@ class DocumentResponse(DocumentBase, TimestampedContract):
     
 class UploadPdfResponse(BaseContract):
     """
-    Response contract for the upload-pdf endpoint.
+    Response contract for the upload-pdf endpoint (legacy - synchronous).
     """
     success: bool
     document_id: UUID
     status: str
     chunks_count: int
     created_at: datetime
+
+
+class UploadJobResponse(BaseContract):
+    """
+    Response when upload job is queued (async background task).
+    """
+    job_id: str
+    document_id: str
+    status: str
+    message: str
+
+
+class JobStatusResponse(BaseContract):
+    """
+    Response for job status check.
+    """
+    job_id: str
+    document_id: str
+    status: str
+    progress_percent: int
+    current_stage: str
+    message: str
+    result: Optional[Dict] = None
+    error: Optional[str] = None
 
 class DocumentUpload(BaseContract):
     """

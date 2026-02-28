@@ -1,12 +1,15 @@
 """
 API contract tests for the /upload/upload-pdf endpoint.
 Tests request validation, authentication, and response schema.
+
+NOTE: The upload endpoint now uses background tasks and returns a job ID immediately.
+Actual processing happens asynchronously. Use /upload/status/{job_id} to check progress.
 """
 
 import pytest
 from datetime import datetime
 from uuid import UUID
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -43,16 +46,18 @@ class TestUploadAuthentication:
         assert "Invalid API key" in response.json().get("detail", "")
 
     def test_upload_valid_api_key_passes_auth(
-        self, client: TestClient, api_key: str, mock_rag_ingestion_service
+        self, client: TestClient, api_key: str
     ):
         """Test upload endpoint accepts valid API key (does not return 401)."""
         if not api_key:
             pytest.skip("UPLOAD_API_KEY not configured")
 
-        # Override the RAG service to avoid real processing
-        app.dependency_overrides[get_rag_ingestion_service] = lambda: mock_rag_ingestion_service
+        # Mock Redis for job status
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        mock_redis.get = AsyncMock(return_value=None)
 
-        try:
+        with patch.object(app.state, "redis_client", mock_redis):
             response = client.post(
                 "/upload/upload-pdf",
                 json={
@@ -63,8 +68,6 @@ class TestUploadAuthentication:
             )
             # Should not be 401 (unauthorized)
             assert response.status_code != 401
-        finally:
-            app.dependency_overrides.pop(get_rag_ingestion_service, None)
 
 
 class TestUploadRequestValidation:
@@ -150,20 +153,19 @@ class TestUploadRequestValidation:
         assert response.status_code == 422
 
 
-class TestUploadSuccessResponse:
-    """Test successful upload response schema."""
+class TestUploadJobResponse:
+    """Test upload endpoint returns job response for async processing."""
 
-    def test_upload_success_response_schema(
-        self, client: TestClient, api_key: str, mock_rag_ingestion_service
-    ):
-        """Test successful upload returns correct response schema."""
+    def test_upload_returns_job_id(self, client: TestClient, api_key: str):
+        """Test successful upload returns job_id for async tracking."""
         if not api_key:
             pytest.skip("UPLOAD_API_KEY not configured")
 
-        # Override the RAG service
-        app.dependency_overrides[get_rag_ingestion_service] = lambda: mock_rag_ingestion_service
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        mock_redis.get = AsyncMock(return_value=None)
 
-        try:
+        with patch.object(app.state, "redis_client", mock_redis):
             response = client.post(
                 "/upload/upload-pdf",
                 json={
@@ -176,40 +178,25 @@ class TestUploadSuccessResponse:
             assert response.status_code == 200
             data = response.json()
 
-            # Verify response schema matches UploadPdfResponse
-            assert "success" in data
-            assert data["success"] is True
+            # Verify response schema matches UploadJobResponse
+            assert "job_id" in data
             assert "document_id" in data
             assert "status" in data
-            assert data["status"] == "ready"
-            assert "chunks_count" in data
-            assert isinstance(data["chunks_count"], int)
-            assert "created_at" in data
+            assert data["status"] == "queued"
+            assert "message" in data
 
-        finally:
-            app.dependency_overrides.pop(get_rag_ingestion_service, None)
-
-    def test_upload_preserves_document_id(
-        self, client: TestClient, api_key: str, mock_rag_ingestion_service
-    ):
+    def test_upload_preserves_document_id(self, client: TestClient, api_key: str):
         """Test upload response contains the same document_id from request."""
         if not api_key:
             pytest.skip("UPLOAD_API_KEY not configured")
 
         test_uuid = "11111111-2222-3333-4444-555555555555"
 
-        # Update mock to return the same UUID
-        mock_rag_ingestion_service.ingest_pdf = AsyncMock(return_value={
-            "success": True,
-            "document_id": UUID(test_uuid),
-            "status": "ready",
-            "chunks_count": 10,
-            "created_at": datetime.now(),
-        })
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        mock_redis.get = AsyncMock(return_value=None)
 
-        app.dependency_overrides[get_rag_ingestion_service] = lambda: mock_rag_ingestion_service
-
-        try:
+        with patch.object(app.state, "redis_client", mock_redis):
             response = client.post(
                 "/upload/upload-pdf",
                 json={
@@ -223,19 +210,16 @@ class TestUploadSuccessResponse:
             data = response.json()
             assert data["document_id"] == test_uuid
 
-        finally:
-            app.dependency_overrides.pop(get_rag_ingestion_service, None)
-
-    def test_upload_with_custom_chunk_size(
-        self, client: TestClient, api_key: str, mock_rag_ingestion_service
-    ):
+    def test_upload_with_custom_chunk_size(self, client: TestClient, api_key: str):
         """Test upload accepts optional chunk_size parameter."""
         if not api_key:
             pytest.skip("UPLOAD_API_KEY not configured")
 
-        app.dependency_overrides[get_rag_ingestion_service] = lambda: mock_rag_ingestion_service
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        mock_redis.get = AsyncMock(return_value=None)
 
-        try:
+        with patch.object(app.state, "redis_client", mock_redis):
             response = client.post(
                 "/upload/upload-pdf",
                 json={
@@ -249,5 +233,26 @@ class TestUploadSuccessResponse:
             # Should not fail validation
             assert response.status_code == 200
 
-        finally:
-            app.dependency_overrides.pop(get_rag_ingestion_service, None)
+    def test_upload_job_id_is_valid_uuid(self, client: TestClient, api_key: str):
+        """Test that returned job_id is a valid UUID."""
+        if not api_key:
+            pytest.skip("UPLOAD_API_KEY not configured")
+
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        mock_redis.get = AsyncMock(return_value=None)
+
+        with patch.object(app.state, "redis_client", mock_redis):
+            response = client.post(
+                "/upload/upload-pdf",
+                json={
+                    "document_url": "https://example.com/test.pdf",
+                    "document_id": "00000000-0000-0000-0000-000000000001",
+                },
+                headers={"X-API-KEY": api_key}
+            )
+
+            data = response.json()
+            # Validate job_id is a valid UUID
+            job_id = data["job_id"]
+            UUID(job_id)  # Will raise if invalid
