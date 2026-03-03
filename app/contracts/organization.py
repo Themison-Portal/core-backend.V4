@@ -17,11 +17,13 @@ class OrganizationBase(BaseContract):
 class OrganizationResponse(OrganizationBase, TimestampedContract):
     id: UUID
     created_by: UUID
+    support_enabled: bool
 
 
 class OrganizationUpdate(BaseContract):
     name: Optional[str] = None
     onboarding_completed: Optional[bool] = None
+    support_enabled: Optional[bool] = None
 
 
 class OrganizationMetrics(BaseContract):
