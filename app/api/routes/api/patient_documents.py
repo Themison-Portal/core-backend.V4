@@ -16,7 +16,7 @@ from app.dependencies.storage import get_storage_service
 from app.models.members import Member
 from app.models.patient_documents import PatientDocument
 from app.services.crud import CRUDBase
-from app.services.storage.gcs_service import GCSStorageService
+from app.services.storage.base import StorageService
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ async def upload_patient_document(
     description: str = Form(""),
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
-    storage: GCSStorageService = Depends(get_storage_service),
+    storage: StorageService = Depends(get_storage_service),
 ):
     settings = get_settings()
     bucket = settings.gcs_bucket_patient_documents
@@ -95,7 +95,7 @@ async def delete_patient_document(
     document_id: UUID,
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
-    storage: GCSStorageService = Depends(get_storage_service),
+    storage: StorageService = Depends(get_storage_service),
 ):
     crud = CRUDBase(PatientDocument, db)
     doc = await crud.get(document_id)
@@ -103,7 +103,7 @@ async def delete_patient_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     settings = get_settings()
-    if doc.document_url and settings.gcs_bucket_patient_documents:
+    if doc.document_url:
         storage.delete_file(settings.gcs_bucket_patient_documents, doc.document_url)
 
     await crud.delete(document_id)

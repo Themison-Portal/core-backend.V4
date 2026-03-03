@@ -11,7 +11,7 @@ from app.contracts.storage import DownloadUrlResponse, UploadResponse
 from app.dependencies.auth import get_current_member
 from app.dependencies.storage import get_storage_service
 from app.models.members import Member
-from app.services.storage.gcs_service import GCSStorageService
+from app.services.storage.base import StorageService
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ async def upload_file(
     bucket: str | None = None,
     folder: str | None = None,
     member: Member = Depends(get_current_member),
-    storage: GCSStorageService = Depends(get_storage_service),
+    storage: StorageService = Depends(get_storage_service),
 ):
     """Upload a file to GCS and return its path + signed URL."""
     settings = get_settings()
@@ -46,7 +46,7 @@ async def upload_file(
 async def download_file(
     document_id: UUID,
     member: Member = Depends(get_current_member),
-    storage: GCSStorageService = Depends(get_storage_service),
+    storage: StorageService = Depends(get_storage_service),
 ):
     """Return a signed download URL for a given document_id.
 
@@ -69,7 +69,7 @@ async def delete_file(
     path: str,
     bucket: str | None = None,
     member: Member = Depends(get_current_member),
-    storage: GCSStorageService = Depends(get_storage_service),
+    storage: StorageService = Depends(get_storage_service),
 ):
     """Delete a file from GCS by its blob path."""
     settings = get_settings()

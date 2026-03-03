@@ -10,8 +10,8 @@ from grpc import aio
 
 from app.config import get_settings
 
-# Import generated protobuf code (generated from rag-service protos)
-from app.clients.rag_pb2 import (
+# Import generated protobuf code (generated from rag-service protos via grpcio-tools)
+from app.clients.generated.rag.v1.rag_service_pb2 import (
     IngestPdfRequest,
     IngestPdfProgress,
     QueryRequest,
@@ -29,7 +29,7 @@ from app.clients.rag_pb2 import (
     RELEVANCE_MEDIUM,
     RELEVANCE_LOW,
 )
-from app.clients.rag_pb2_grpc import RagServiceStub
+from app.clients.generated.rag.v1.rag_service_pb2_grpc import RagServiceStub
 
 logger = logging.getLogger(__name__)
 

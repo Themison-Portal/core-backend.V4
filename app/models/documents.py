@@ -32,7 +32,15 @@ class Document(Base):
     id: Mapped[UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     document_name: Mapped[str] = Column(Text, nullable=False)
-    document_type: Mapped[str] = Column(String, nullable=False)
+    document_type: Mapped[str] = Column(
+        ENUM(
+            "protocol", "brochure", "consent_form", "report", "manual",
+            "plan", "amendment", "icf", "case_report_form",
+            "standard_operating_procedure", "other",
+            name="document_type_enum", create_type=False,
+        ),
+        nullable=False,
+    )
     document_url: Mapped[str] = Column(String, nullable=False)
     trial_id: Mapped[Optional[UUID]] = Column(UUID(as_uuid=True), nullable=True)
     updated_at: Mapped[Optional[datetime]] = Column(DateTime(timezone=True), nullable=True, default=lambda: datetime.now(timezone.utc))

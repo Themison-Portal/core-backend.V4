@@ -15,6 +15,7 @@ from app.api.routes.upload import router as upload_router
 
 # Storage routes
 from app.api.routes.storage.storage import router as storage_router
+from app.api.routes.local_files import router as local_files_router
 
 # Business API routes
 from app.api.routes.api.organizations import router as organizations_router
@@ -133,6 +134,7 @@ app.include_router(
 
 # --- Storage routes ---
 app.include_router(storage_router, prefix="/storage", tags=["storage"])
+app.include_router(local_files_router, prefix="/local-files", tags=["local-files"])
 
 # --- Business API routes ---
 app.include_router(organizations_router, prefix="/api/organizations", tags=["organizations"])

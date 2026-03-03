@@ -47,11 +47,32 @@ async def _run_ingestion_task(
     job_service = JobStatusService(redis_client)
 
     try:
+        # Resolve document_url to a downloadable HTTP URL.
+        # LocalStorageService stores full HTTP URLs (http://localhost:8000/local-files/...).
+        # GCSStorageService stores relative blob paths (trials/{id}/file.pdf).
+        # The RAG service needs an HTTP URL to fetch the PDF, so generate a
+        # GCS signed URL when the stored path is not already a URL.
+        if not document_url.startswith(("http://", "https://")):
+            from app.dependencies.storage import get_storage_service
+            settings = get_settings()
+            storage = get_storage_service()
+            document_url = storage.get_signed_url(
+                settings.gcs_bucket_trial_documents,
+                document_url,
+                expiration_hours=2,
+            )
+            logger.info(f"Resolved GCS blob path to signed URL for job {job_id}")
+
         if use_grpc:
+            # In Docker, the rag-service can't reach localhost:8000 (the backend).
+            # Translate to the Docker-internal hostname so it resolves correctly.
+            # GCS signed URLs (https://storage.googleapis.com/...) are unaffected.
+            grpc_url = document_url.replace("localhost:8000", "backend:8000")
+
             # gRPC path - stream progress from RAG service
             await _ingest_via_grpc(
                 job_id=job_id,
-                document_url=document_url,
+                document_url=grpc_url,
                 document_id=document_id,
                 chunk_size=chunk_size,
                 job_service=job_service,
@@ -87,13 +108,21 @@ async def _ingest_via_grpc(
     client = RagClient(grpc_address)
     result = None
 
+    # Map protobuf IngestStage enum ints to string names
+    _STAGE_NAMES = {
+        0: "unspecified", 1: "downloading", 2: "parsing",
+        3: "chunking", 4: "embedding", 5: "storing",
+        6: "complete", 7: "error",
+    }
+
     async for progress in client.ingest_pdf(
         document_url=document_url,
         document_id=document_id,
         chunk_size=chunk_size,
     ):
         # Map gRPC progress to job status
-        stage = progress.get("stage", "processing")
+        raw_stage = progress.get("stage", 0)
+        stage = _STAGE_NAMES.get(raw_stage, str(raw_stage))
         percent = progress.get("progress_percent", 0)
         message = progress.get("message", "")
 

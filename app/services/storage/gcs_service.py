@@ -10,11 +10,12 @@ from google.cloud import storage as gcs
 from google.oauth2 import service_account
 
 from app.config import get_settings
+from app.services.storage.base import StorageService
 
 logger = logging.getLogger(__name__)
 
 
-class GCSStorageService:
+class GCSStorageService(StorageService):
     """Thin wrapper around google-cloud-storage for Themison file operations."""
 
     def __init__(self) -> None:
