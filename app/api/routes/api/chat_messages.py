@@ -51,9 +51,15 @@ async def create_message(
     db: AsyncSession = Depends(get_db),
 ):
     # Verify session exists
-    session = (await db.execute(
-        select(ChatSession).where(ChatSession.id == payload.session_id)
-    )).scalars().first()
+    session = (
+        (
+            await db.execute(
+                select(ChatSession).where(ChatSession.id == payload.session_id)
+            )
+        )
+        .scalars()
+        .first()
+    )
 
     if not session:
         raise HTTPException(status_code=404, detail="Chat session not found")
@@ -77,3 +83,71 @@ async def create_message(
         "role": msg.role,
         "created_at": msg.created_at.isoformat() if msg.created_at else None,
     }
+
+
+# -------------------------------
+# Update Message
+# -------------------------------
+@router.put("/{message_id}")
+async def update_message(
+    message_id: UUID,
+    content: str,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    msg = (
+        (await db.execute(select(ChatMessage).where(ChatMessage.id == message_id)))
+        .scalars()
+        .first()
+    )
+    if not msg:
+        raise HTTPException(status_code=404, detail="Chat message not found")
+
+    # Optional: Only author or admin can update
+    if msg.user_id != member.id and member.org_role not in ["superadmin", "admin"]:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update this message"
+        )
+
+    msg.content = content
+    msg.updated_at = datetime.now(timezone.utc)
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+
+    return {
+        "id": str(msg.id),
+        "session_id": str(msg.session_id),
+        "content": msg.content,
+        "role": msg.role,
+        "created_at": msg.created_at.isoformat() if msg.created_at else None,
+        "updated_at": msg.updated_at.isoformat() if msg.updated_at else None,
+    }
+
+
+# -------------------------------
+# Delete Message (Soft Delete)
+# -------------------------------
+@router.delete("/{message_id}", status_code=204)
+async def delete_message(
+    message_id: UUID,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    msg = (
+        (await db.execute(select(ChatMessage).where(ChatMessage.id == message_id)))
+        .scalars()
+        .first()
+    )
+    if not msg:
+        raise HTTPException(status_code=404, detail="Chat message not found")
+
+    # Optional: Only author or admin can delete
+    if msg.user_id != member.id and member.org_role not in ["superadmin", "admin"]:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete this message"
+        )
+
+    msg.deleted_at = datetime.now(timezone.utc)
+    db.add(msg)
+    await db.commit()

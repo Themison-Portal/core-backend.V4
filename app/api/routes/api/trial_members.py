@@ -106,7 +106,10 @@ async def add_trial_member(
     # Admin-only check
     if member.org_role not in ["superadmin", "admin"]:
         raise HTTPException(status_code=403, detail="Only admins can add trial members")
-    tm = TrialMember(**payload.model_dump())
+    data = payload.model_dump()
+
+    data["trial_id"] = trial.id
+    tm = TrialMember(**data)
     db.add(tm)
     await db.commit()
     await db.refresh(tm)
@@ -138,11 +141,13 @@ async def add_trial_member(
 @router.post("/pending", response_model=PendingMemberResponse, status_code=201)
 async def add_pending_member(
     payload: PendingMemberCreate,
+    trial=Depends(get_trial_with_access),
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
     data = payload.model_dump()
     data["invited_by"] = member.id
+    data["trial_id"] = trial.id
     tmp = TrialMemberPending(**data)
     db.add(tmp)
     await db.commit()
