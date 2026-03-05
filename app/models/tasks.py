@@ -11,12 +11,24 @@ class Task(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True)
     trial_id = Column(UUID(as_uuid=True), ForeignKey("trials.id"), nullable=False)
-    status = Column(String, nullable=False)
-    due_date = Column(DateTime, nullable=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="todo")
+    priority = Column(String, nullable=True)
     assigned_to = Column(UUID(as_uuid=True), ForeignKey("members.id"), nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    patient_id = Column(UUID(as_uuid=True), ForeignKey("patients.id"), nullable=True)
+    visit_id = Column(UUID(as_uuid=True), ForeignKey("visits.id"), nullable=True)
+    activity_type_id = Column(
+        UUID(as_uuid=True), ForeignKey("activity_types.id"), nullable=True
+    )
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)
 
     # relationships
     trial = relationship("Trial", back_populates="tasks")
     assigned_user = relationship("Member", back_populates="tasks")
+    patient = relationship("Patient", back_populates="tasks")
+    visit = relationship("Visit", back_populates="tasks")
+    activity_type = relationship("ActivityType", back_populates="tasks")
