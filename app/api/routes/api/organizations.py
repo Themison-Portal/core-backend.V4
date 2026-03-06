@@ -118,6 +118,59 @@ async def get_organization_metrics(
     )
 
 
+# -----------------------
+# Admin endpoints for managing any org
+# -----------------------
+
+
+@router.get("/{org_id}", response_model=OrganizationResponse)
+async def get_organization_by_id(
+    org_id: str,
+    current_user: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get organization by ID.
+    Only accessible by admin/superadmin roles.
+    """
+    if current_user.org_role not in ["superadmin", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    result = await db.execute(select(Organization).where(Organization.id == org_id))
+    org = result.scalars().first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    return org
+
+
+@router.put("/{org_id}", response_model=OrganizationResponse)
+async def update_organization_by_id(
+    org_id: str,
+    payload: OrganizationUpdate,
+    current_user: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update organization by ID.
+    Only accessible by admin/superadmin roles.
+    """
+    if current_user.org_role not in ["superadmin", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    result = await db.execute(select(Organization).where(Organization.id == org_id))
+    org = result.scalars().first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(org, key, value)
+
+    await db.commit()
+    await db.refresh(org)
+    return org
+
+
 @router.delete("/members/{member_id}", status_code=200)
 async def delete_organization_member(
     member_id: str,
