@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.contracts.organization import OrganizationMetrics, OrganizationResponse, OrganizationUpdate
+from app.contracts.organization import (
+    OrganizationMetrics,
+    OrganizationResponse,
+    OrganizationUpdate,
+)
 from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
 from app.models.members import Member
@@ -60,32 +64,50 @@ async def get_organization_metrics(
 ):
     org_id = member.organization_id
 
-    members_count = (await db.execute(
-        select(func.count()).select_from(Member).where(Member.organization_id == org_id)
-    )).scalar_one()
-
-    trials_count = (await db.execute(
-        select(func.count()).select_from(Trial).where(Trial.organization_id == org_id)
-    )).scalar_one()
-
-    active_trials = (await db.execute(
-        select(func.count()).select_from(Trial).where(
-            Trial.organization_id == org_id, Trial.status == "active"
+    members_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Member)
+            .where(Member.organization_id == org_id)
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    patients_count = (await db.execute(
-        select(func.count()).select_from(Patient).where(Patient.organization_id == org_id)
-    )).scalar_one()
+    trials_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Trial)
+            .where(Trial.organization_id == org_id)
+        )
+    ).scalar_one()
+
+    active_trials = (
+        await db.execute(
+            select(func.count())
+            .select_from(Trial)
+            .where(Trial.organization_id == org_id, Trial.status == "active")
+        )
+    ).scalar_one()
+
+    patients_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Patient)
+            .where(Patient.organization_id == org_id)
+        )
+    ).scalar_one()
 
     # Documents count: trial_documents linked to this org's trials
-    documents_count = (await db.execute(
-        select(func.count()).select_from(Document).where(
-            Document.trial_id.in_(
-                select(Trial.id).where(Trial.organization_id == org_id)
+    documents_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(Document)
+            .where(
+                Document.trial_id.in_(
+                    select(Trial.id).where(Trial.organization_id == org_id)
+                )
             )
         )
-    )).scalar_one()
+    ).scalar_one()
 
     return OrganizationMetrics(
         total_members=members_count,
@@ -94,3 +116,64 @@ async def get_organization_metrics(
         total_documents=documents_count,
         active_trials=active_trials,
     )
+
+
+@router.delete("/members/{member_id}", status_code=200)
+async def delete_organization_member(
+    member_id: str,
+    current_user: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete a member from the organization.
+    Only allow if current_user is staff/admin/superadmin.
+    """
+    # Step 0: Check permissions (only superadmin/admin can delete)
+    if current_user.org_role not in ["superadmin", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete members")
+
+    # Step 1: Fetch the member to delete
+    result = await db.execute(
+        select(Member).where(
+            Member.id == member_id,
+            Member.organization_id == current_user.organization_id,
+        )
+    )
+    member_to_delete = result.scalars().first()
+    if not member_to_delete:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    # Step 2: Prevent deleting the last superadmin
+    if member_to_delete.org_role == "superadmin":
+        superadmin_count = (
+            await db.execute(
+                select(func.count())
+                .select_from(Member)
+                .where(
+                    Member.organization_id == current_user.organization_id,
+                    Member.org_role == "superadmin",
+                )
+            )
+        ).scalar_one()
+        if superadmin_count <= 1:
+            raise HTTPException(
+                status_code=400, detail="Cannot remove the last superadmin"
+            )
+
+    # Step 3: Optional - save snapshot (you can use JSON column if needed)
+    user_snapshot = {
+        "id": member_to_delete.id,
+        "email": member_to_delete.email,
+        "first_name": member_to_delete.first_name,
+        "last_name": member_to_delete.last_name,
+        "role": member_to_delete.org_role,
+        "deleted_at": str(func.now()),
+    }
+    # You could store snapshot in a separate table if needed
+
+    # Step 4: Delete the member (soft delete recommended)
+    member_to_delete.deleted_at = func.now()  # soft delete
+    await db.commit()
+    await db.refresh(member_to_delete)
+
+    return {"message": "Member deleted successfully", "snapshot": user_snapshot}
