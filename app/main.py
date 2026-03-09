@@ -32,6 +32,7 @@ from app.api.routes.api.chat_sessions import router as chat_sessions_router
 from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
 from app.api.routes.api.threads import router as chat_threads_router
+from app.api.routes.api.tasks import router as tasks_router
 
 from contextlib import asynccontextmanager
 from redis.asyncio import Redis
@@ -156,6 +157,7 @@ app.include_router(
 app.include_router(
     patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"]
 )
+app.include_router(tasks_router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(
     patient_documents_router,
     prefix="/api/patient-documents",

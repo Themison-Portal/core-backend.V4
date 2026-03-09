@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
 
-from app.database import Base
+from .base import Base
 
 
 class ChatMessage(Base):
