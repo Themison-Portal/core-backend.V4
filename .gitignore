@@ -31,6 +31,7 @@ venv.bak/
 # IDE specific files
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 .DS_Store
