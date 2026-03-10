@@ -33,6 +33,7 @@ from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
 from app.api.routes.api.threads import router as chat_threads_router
 from app.api.routes.api.tasks import router as tasks_router
+from app.api.routes.api.activities import router as trial_activities_router
 
 from contextlib import asynccontextmanager
 from redis.asyncio import Redis
@@ -146,6 +147,11 @@ app.include_router(invitations_router, prefix="/api/invitations", tags=["invitat
 app.include_router(trials_router, prefix="/api/trials", tags=["trials"])
 app.include_router(
     trial_members_router, prefix="/api/trial-members", tags=["trial-members"]
+)
+app.include_router(
+    trial_activities_router,
+    prefix="/api/trials/{trial_id}/activities",
+    tags=["trial-activities"],
 )
 app.include_router(
     trial_documents_router, prefix="/api/trial-documents", tags=["trial-documents"]
