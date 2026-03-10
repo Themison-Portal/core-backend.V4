@@ -15,6 +15,7 @@ from app.dependencies.db import get_db
 from app.dependencies.storage import get_storage_service
 from app.models.documents import Document
 from app.models.members import Member
+from app.models.trials import Trial
 from app.services.crud import CRUDBase
 from app.services.storage.base import StorageService
 
@@ -58,16 +59,30 @@ async def upload_trial_document(
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
 ):
+    crud_trial = CRUDBase(Trial, db)
+    trial = await crud_trial.get(trial_id)
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+
     settings = get_settings()
     bucket = settings.gcs_bucket_trial_documents
 
+    import uuid
     file_data = await file.read()
     folder = f"trials/{trial_id}"
-
+    # Ensure a unique filename to avoid duplicate URL constraint
+    unique_suffix = uuid.uuid4().hex[:8]
+    base_name = file.filename or "document"
+    # Preserve extension if present
+    if "." in base_name:
+        name_part, ext = base_name.rsplit(".", 1)
+        unique_filename = f"{name_part}_{unique_suffix}.{ext}"
+    else:
+        unique_filename = f"{base_name}_{unique_suffix}"
     upload_result = storage.upload_file(
         bucket_name=bucket,
         file_data=file_data,
-        filename=file.filename or "document",
+        filename=unique_filename,
         content_type=file.content_type or "application/octet-stream",
         folder=folder,
     )
