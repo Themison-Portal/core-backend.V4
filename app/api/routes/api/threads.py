@@ -12,8 +12,7 @@ from app.models.chat_threads import ChatThread
 from app.models.chat_messages import ChatMessage
 from app.models.thread_participants import ThreadParticipant
 from app.models.members import Member
-from app.contracts.chat import ThreadCreate, ThreadUpdate
-
+from app.contracts.thread_chat import ThreadCreate, ThreadUpdate
 router = APIRouter()
 
 

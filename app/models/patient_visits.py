@@ -9,8 +9,11 @@ from typing import Optional
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, Text, Time
 from sqlalchemy.dialects.postgresql import ENUM, JSON, UUID
+from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
-from app.models.visit_activities import VisitActivity
+
+if TYPE_CHECKING:
+    from app.models.visit_activities import VisitActivity
 
 from app.models.members import Member
 from app.models.trials import Trial
@@ -93,8 +96,6 @@ class PatientVisit(Base):
     patient: Mapped["Patient"] = relationship("Patient", foreign_keys=[patient_id])
     trial: Mapped["Trial"] = relationship("Trial", foreign_keys=[trial_id])
     doctor: Mapped["Member"] = relationship("Member", foreign_keys=[doctor_id])
-
-
-activities: Mapped[list["VisitActivity"]] = relationship(
-    "VisitActivity", back_populates="visit", cascade="all, delete-orphan"
-)
+    activities: Mapped[list["VisitActivity"]] = relationship(
+        "VisitActivity", back_populates="visit", cascade="all, delete-orphan"
+    )

@@ -1,0 +1,186 @@
+From: Jonaath <Jonaath@themison.com>
+Date: Wed, 11 Mar 2026
+Subject: [PATCH] Fix startup errors found during deployment
+
+---
+
+diff --git a/Dockerfile b/Dockerfile
+index 1234abc..5678def 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -22,6 +22,7 @@ RUN mkdir -p uploads
+ 
+ ENV PYTHONPATH=/app
++ENV PORT=8080
+ 
+ EXPOSE 8080
+ 
+-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
++CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
+diff --git a/app/api/routes/api/activities.py b/app/api/routes/api/activities.py
+index b51a677..3dc2258 100644
+--- a/app/api/routes/api/activities.py
++++ b/app/api/routes/api/activities.py
+@@ -5,14 +5,15 @@ from uuid import UUID
+ from typing import List
+ from app.models.activity_types import ActivityType
+ from app.models.trial_activity_types import TrialActivityType
++from app.contracts.activity_type import TrialActivityTypeResponse, TrialActivityTypeCreate
+ from app.dependencies.db import get_db
+ from app.dependencies.trial_access import get_trial_with_access
+ from app.models.trials import Trial
+ 
+-router = APIRouter(prefix="/trials/{trial_id}/activities")
++router = APIRouter()
+ 
+ 
+-@router.get("/", response_model=List[TrialActivityType])
++@router.get("/", response_model=List[TrialActivityTypeResponse])
+ async def list_trial_activities(
+     trial_id: UUID,
+     trial: Trial = Depends(get_trial_with_access),
+@@ -24,7 +25,7 @@ async def list_trial_activities(
+     return result.scalars().all()
+ 
+ 
+-@router.get("/{activity_id}", response_model=TrialActivityType)
++@router.get("/{activity_id}", response_model=TrialActivityTypeResponse)
+ async def get_trial_activity(
+     trial_id: UUID,
+     activity_id: str,
+@@ -43,25 +44,26 @@ async def get_trial_activity(
+     return activity
+ 
+ 
+-@router.post("/", response_model=TrialActivityType, status_code=201)
++@router.post("/", response_model=TrialActivityTypeResponse, status_code=201)
+ async def create_trial_activity(
+     trial_id: UUID,
+-    payload: TrialActivityType,
++    payload: TrialActivityTypeCreate,
+     trial: Trial = Depends(get_trial_with_access),
+     db: AsyncSession = Depends(get_db),
+ ):
+-    activity = TrialActivityType(trial_id=trial_id, **payload.model_dump())
++    import uuid
++    activity = TrialActivityType(id=uuid.uuid4(), trial_id=trial_id, **payload.model_dump())
+     db.add(activity)
+     await db.commit()
+     await db.refresh(activity)
+     return activity
+ 
+ 
+-@router.put("/{activity_id}", response_model=TrialActivityType)
++@router.put("/{activity_id}", response_model=TrialActivityTypeResponse)
+ async def update_trial_activity(
+     trial_id: UUID,
+     activity_id: str,
+-    payload: TrialActivityType,
++    payload: TrialActivityTypeCreate,
+     trial: Trial = Depends(get_trial_with_access),
+     db: AsyncSession = Depends(get_db),
+ ):
+diff --git a/app/api/routes/api/threads.py b/app/api/routes/api/threads.py
+index ec771f0..53c73b9 100644
+--- a/app/api/routes/api/threads.py
++++ b/app/api/routes/api/threads.py
+@@ -12,8 +12,7 @@ from app.models.chat_threads import ChatThread
+ from app.models.chat_messages import ChatMessage
+ from app.models.thread_participants import ThreadParticipant
+ from app.models.members import Member
+-from app.contracts.chat import ThreadCreate, ThreadUpdate
+-
++from app.contracts.thread_chat import ThreadCreate, ThreadUpdate
+ router = APIRouter()
+ 
+ 
+diff --git a/app/contracts/activity_type.py b/app/contracts/activity_type.py
+new file mode 100644
+index 0000000..0000001
+--- /dev/null
++++ b/app/contracts/activity_type.py
+@@ -0,0 +1,26 @@
++from typing import Optional
++from uuid import UUID
++from datetime import datetime
++from pydantic import BaseModel
++
++
++class TrialActivityTypeResponse(BaseModel):
++    id: UUID
++    trial_id: UUID
++    activity_id: str
++    name: str
++    category: Optional[str] = None
++    description: Optional[str] = None
++    is_custom: Optional[bool] = True
++    deleted_at: Optional[datetime] = None
++
++    model_config = {"from_attributes": True}
++
++
++class TrialActivityTypeCreate(BaseModel):
++    activity_id: str
++    name: str
++    category: Optional[str] = None
++    description: Optional[str] = None
++    is_custom: Optional[bool] = True
++
+diff --git a/app/models/patient_visits.py b/app/models/patient_visits.py
+index 64e977b..2927802 100644
+--- a/app/models/patient_visits.py
++++ b/app/models/patient_visits.py
+@@ -9,8 +9,11 @@ from typing import Optional
+ 
+ from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, Text, Time
+ from sqlalchemy.dialects.postgresql import ENUM, JSON, UUID
++from typing import TYPE_CHECKING
+ from sqlalchemy.orm import Mapped, relationship
+-from app.models.visit_activities import VisitActivity
++
++if TYPE_CHECKING:
++    from app.models.visit_activities import VisitActivity
+ 
+ from app.models.members import Member
+ from app.models.trials import Trial
+@@ -93,8 +96,6 @@ class PatientVisit(Base):
+     patient: Mapped["Patient"] = relationship("Patient", foreign_keys=[patient_id])
+     trial: Mapped["Trial"] = relationship("Trial", foreign_keys=[trial_id])
+     doctor: Mapped["Member"] = relationship("Member", foreign_keys=[doctor_id])
+-
+-
+-activities: Mapped[list["VisitActivity"]] = relationship(
+-    "VisitActivity", back_populates="visit", cascade="all, delete-orphan"
+-)
++    activities: Mapped[list["VisitActivity"]] = relationship(
++        "VisitActivity", back_populates="visit", cascade="all, delete-orphan"
++    )
+diff --git a/app/models/tasks.py b/app/models/tasks.py
+index 83b49d6..ceae3da 100644
+--- a/app/models/tasks.py
++++ b/app/models/tasks.py
+@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, DateTime, ForeignKey
+ from sqlalchemy.dialects.postgresql import UUID
+ from sqlalchemy.orm import relationship
+ from datetime import datetime
+-from app.dependencies.db import Base  # your declarative base
++from .base import Base  # your declarative base
+ 
+ 
+ class Task(Base):
+diff --git a/app/models/visit_activities.py b/app/models/visit_activities.py
+index 3c9cbc8..40c7e92 100644
+--- a/app/models/visit_activities.py
++++ b/app/models/visit_activities.py
+@@ -7,7 +7,10 @@ from datetime import datetime, timezone
+ from typing import Optional
+ from sqlalchemy import Column, DateTime, ForeignKey, String
+ from sqlalchemy.dialects.postgresql import UUID
++from typing import TYPE_CHECKING
+ from sqlalchemy.orm import Mapped, relationship
+-from app.models.patient_visits import PatientVisit
++
++if TYPE_CHECKING:
++    from app.models.patient_visits import PatientVisit
+ 
+ from .base import Base

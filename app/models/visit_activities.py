@@ -7,8 +7,11 @@ from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import Column, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
+from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
-from app.models.patient_visits import PatientVisit
+
+if TYPE_CHECKING:
+    from app.models.patient_visits import PatientVisit
 
 from .base import Base
 
