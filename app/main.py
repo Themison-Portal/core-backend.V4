@@ -32,6 +32,9 @@ from app.api.routes.api.patient_documents import router as patient_documents_rou
 from app.api.routes.api.chat_sessions import router as chat_sessions_router
 from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
+from app.api.routes.api.threads import router as chat_threads_router
+from app.api.routes.api.tasks import router as tasks_router
+from app.api.routes.api.activities import router as trial_activities_router
 
 from contextlib import asynccontextmanager
 from redis.asyncio import Redis
@@ -44,6 +47,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Application state for storing loaded models
 app_state = {}
+
 
 # --- Lifespan handler ---
 @asynccontextmanager
@@ -62,8 +66,8 @@ async def lifespan(app: FastAPI):
             logging.info("Redis connection successful.")
         except Exception as e:
             logging.error(f"Redis connection failed: {e}")
-            raise RuntimeError("Failed to connect to Redis") from e            
-        
+            raise RuntimeError("Failed to connect to Redis") from e
+
         yield
 
     finally:
@@ -110,15 +114,14 @@ app.add_middleware(
 if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
     allowed_origins = ["*"]
 logging.info(f"calling root endpoint with allowed origins")
+
+
 @app.get("/")
 def root():
     return {"status": "ok"}
 
-app.include_router(
-    auth_router,
-    prefix="/auth",
-    tags=["auth"]
-)
+
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 app.include_router(
     upload_router,
@@ -137,18 +140,46 @@ app.include_router(storage_router, prefix="/storage", tags=["storage"])
 app.include_router(local_files_router, prefix="/local-files", tags=["local-files"])
 
 # --- Business API routes ---
-app.include_router(organizations_router, prefix="/api/organizations", tags=["organizations"])
+app.include_router(
+    organizations_router, prefix="/api/organizations", tags=["organizations"]
+)
 app.include_router(members_router, prefix="/api/members", tags=["members"])
 app.include_router(roles_router, prefix="/api/roles", tags=["roles"])
 app.include_router(invitations_router, prefix="/api/invitations", tags=["invitations"])
 app.include_router(trials_router, prefix="/api/trials", tags=["trials"])
-app.include_router(trial_members_router, prefix="/api/trial-members", tags=["trial-members"])
-app.include_router(trial_documents_router, prefix="/api/trial-documents", tags=["trial-documents"])
+app.include_router(
+    trial_members_router, prefix="/api/trial-members", tags=["trial-members"]
+)
+app.include_router(
+    trial_activities_router,
+    prefix="/api/trials/{trial_id}/activities",
+    tags=["trial-activities"],
+)
+app.include_router(
+    trial_documents_router, prefix="/api/trial-documents", tags=["trial-documents"]
+)
 app.include_router(patients_router, prefix="/api/patients", tags=["patients"])
-app.include_router(trial_patients_router, prefix="/api/trial-patients", tags=["trial-patients"])
-app.include_router(patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"])
-app.include_router(patient_documents_router, prefix="/api/patient-documents", tags=["patient-documents"])
-app.include_router(chat_sessions_router, prefix="/api/chat-sessions", tags=["chat-sessions"])
-app.include_router(chat_messages_router, prefix="/api/chat-messages", tags=["chat-messages"])
-app.include_router(qa_repository_router, prefix="/api/qa-repository", tags=["qa-repository"])
-
+app.include_router(
+    trial_patients_router, prefix="/api/trial-patients", tags=["trial-patients"]
+)
+app.include_router(
+    patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"]
+)
+app.include_router(tasks_router, prefix="/api/tasks", tags=["tasks"])
+app.include_router(
+    patient_documents_router,
+    prefix="/api/patient-documents",
+    tags=["patient-documents"],
+)
+app.include_router(
+    chat_sessions_router, prefix="/api/chat-sessions", tags=["chat-sessions"]
+)
+app.include_router(
+    chat_messages_router, prefix="/api/chat-messages", tags=["chat-messages"]
+)
+app.include_router(
+    chat_threads_router, prefix="/api/chat-threads", tags=["chat-threads"]
+)
+app.include_router(
+    qa_repository_router, prefix="/api/qa-repository", tags=["qa-repository"]
+)

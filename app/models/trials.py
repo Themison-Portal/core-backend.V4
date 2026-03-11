@@ -34,7 +34,12 @@ class Trial(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[Optional[datetime]] = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
     budget_data: Mapped[Optional[dict]] = Column(JSON, default=dict)
+    # Add this field for visit schedule template
+    visit_schedule_template: Mapped[Optional[dict]] = Column(
+        JSON, default=dict, nullable=True
+    )

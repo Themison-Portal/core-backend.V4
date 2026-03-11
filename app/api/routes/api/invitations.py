@@ -1,10 +1,12 @@
 """
 Invitation routes — GET /count, POST /batch
+
+Invitation token validation — GET /invitations/validate/{token}
 """
 
 from typing import List
-
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +41,53 @@ async def list_invitations(
     return result.scalars().all()
 
 
+@router.get("/validate/{token}")
+async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_db)):
+    """
+    Validate an invitation token for signup (new users).
+
+    Returns invitation details if valid.
+    Raises 404/400 if token is invalid, expired, already used, or does not exist.
+    """
+    result = await db.execute(select(Invitation).where(Invitation.token == token))
+    invitation = result.scalars().first()
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found",
+        )
+
+    if invitation.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invitation is not pending (current status: {invitation.status})",
+        )
+
+    if invitation.expires_at and invitation.expires_at < datetime.utcnow():
+        # Optionally, mark invitation as expired in DB
+        invitation.status = "expired"
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation has expired",
+        )
+
+    # Check if user already exists is handled in signup flow or by frontend
+    # Return invitation info for pre-filling signup form
+    return {
+        "id": str(invitation.id),
+        "email": invitation.email,
+        "organization_id": str(invitation.organization_id),
+        "initial_role": invitation.initial_role,
+        "status": invitation.status,
+        "expires_at": (
+            invitation.expires_at.isoformat() if invitation.expires_at else None
+        ),
+        "name": invitation.name,
+    }
+
+
 @router.get("/count", response_model=InvitationCountResponse)
 async def get_invitation_counts(
     member: Member = Depends(get_current_member),
@@ -46,23 +95,31 @@ async def get_invitation_counts(
 ):
     org_id = member.organization_id
 
-    pending = (await db.execute(
-        select(func.count()).select_from(Invitation).where(
-            Invitation.organization_id == org_id, Invitation.status == "pending"
+    pending = (
+        await db.execute(
+            select(func.count())
+            .select_from(Invitation)
+            .where(Invitation.organization_id == org_id, Invitation.status == "pending")
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    accepted = (await db.execute(
-        select(func.count()).select_from(Invitation).where(
-            Invitation.organization_id == org_id, Invitation.status == "accepted"
+    accepted = (
+        await db.execute(
+            select(func.count())
+            .select_from(Invitation)
+            .where(
+                Invitation.organization_id == org_id, Invitation.status == "accepted"
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    expired = (await db.execute(
-        select(func.count()).select_from(Invitation).where(
-            Invitation.organization_id == org_id, Invitation.status == "expired"
+    expired = (
+        await db.execute(
+            select(func.count())
+            .select_from(Invitation)
+            .where(Invitation.organization_id == org_id, Invitation.status == "expired")
         )
-    )).scalar_one()
+    ).scalar_one()
 
     return InvitationCountResponse(
         pending=pending,
@@ -83,13 +140,19 @@ async def batch_create_invitations(
 
     for item in payload.invitations:
         # Check email uniqueness within org
-        existing = (await db.execute(
-            select(Invitation).where(
-                Invitation.organization_id == org_id,
-                Invitation.email == item.email,
-                Invitation.status == "pending",
+        existing = (
+            (
+                await db.execute(
+                    select(Invitation).where(
+                        Invitation.organization_id == org_id,
+                        Invitation.email == item.email,
+                        Invitation.status == "pending",
+                    )
+                )
             )
-        )).scalars().first()
+            .scalars()
+            .first()
+        )
 
         if existing:
             raise HTTPException(

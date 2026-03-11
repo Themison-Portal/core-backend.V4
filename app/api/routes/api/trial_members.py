@@ -16,6 +16,7 @@ from app.contracts.trial_member import (
     TrialMemberResponse,
 )
 from app.dependencies.auth import get_current_member
+from app.dependencies.trial_access import get_trial_with_access
 from app.dependencies.db import get_db
 from app.models.invitations import Invitation
 from app.models.members import Member
@@ -30,7 +31,7 @@ router = APIRouter()
 @router.get("/team/{trial_id}", response_model=List[TrialMemberResponse])
 async def get_trial_team(
     trial_id: UUID,
-    member: Member = Depends(get_current_member),
+    member: Member = Depends(get_trial_with_access),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -65,7 +66,7 @@ async def get_trial_team(
 @router.get("/pending/{trial_id}", response_model=List[PendingMemberResponse])
 async def get_pending_members(
     trial_id: UUID,
-    member: Member = Depends(get_current_member),
+    member: Member = Depends(get_trial_with_access),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -97,16 +98,28 @@ async def get_pending_members(
 @router.post("/", response_model=TrialMemberResponse, status_code=201)
 async def add_trial_member(
     payload: TrialMemberCreate,
+    trial=Depends(get_trial_with_access),
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    tm = TrialMember(**payload.model_dump())
+
+    # Admin-only check
+    if member.org_role not in ["superadmin", "admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can add trial members")
+    data = payload.model_dump()
+
+    data["trial_id"] = trial.id
+    tm = TrialMember(**data)
     db.add(tm)
     await db.commit()
     await db.refresh(tm)
 
     # Return with joined data
-    m = (await db.execute(select(Member).where(Member.id == tm.member_id))).scalars().first()
+    m = (
+        (await db.execute(select(Member).where(Member.id == tm.member_id)))
+        .scalars()
+        .first()
+    )
     r = (await db.execute(select(Role).where(Role.id == tm.role_id))).scalars().first()
 
     return TrialMemberResponse(
@@ -128,17 +141,23 @@ async def add_trial_member(
 @router.post("/pending", response_model=PendingMemberResponse, status_code=201)
 async def add_pending_member(
     payload: PendingMemberCreate,
+    trial=Depends(get_trial_with_access),
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
     data = payload.model_dump()
     data["invited_by"] = member.id
+    data["trial_id"] = trial.id
     tmp = TrialMemberPending(**data)
     db.add(tmp)
     await db.commit()
     await db.refresh(tmp)
 
-    inv = (await db.execute(select(Invitation).where(Invitation.id == tmp.invitation_id))).scalars().first()
+    inv = (
+        (await db.execute(select(Invitation).where(Invitation.id == tmp.invitation_id)))
+        .scalars()
+        .first()
+    )
     r = (await db.execute(select(Role).where(Role.id == tmp.role_id))).scalars().first()
 
     return PendingMemberResponse(

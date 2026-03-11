@@ -25,7 +25,10 @@ class Organization(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[Optional[datetime]] = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
     onboarding_completed: Mapped[Optional[bool]] = Column(Boolean, default=False)
+    # NEW flag added to enable/disable support for an organization. This allows us to turn off support for specific organizations without deleting them.
+    support_enabled: Mapped[bool] = Column(Boolean, default=True)
