@@ -84,3 +84,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# MCP / debug scripts
+.mcp.json
+mcp_debug_upload.py
+mcp_server.py
