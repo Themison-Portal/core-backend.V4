@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
+from app.contracts.patient_visit import PatientVisitResponse
 from app.models.members import Member
 from app.models.patient_visits import PatientVisit
 from app.models.visit_activities import VisitActivity
@@ -22,7 +23,7 @@ router = APIRouter()
 
 @router.post(
     "/trials/{trial_id}/patients/{patient_id}/visits/{visit_id}/complete",
-    response_model=PatientVisit,
+    response_model=PatientVisitResponse,
 )
 async def complete_visit(
     trial_id: str,
@@ -36,8 +37,22 @@ async def complete_visit(
     - Only PI/CRC can complete
     - All activities must be completed or not_applicable
     """
+    from app.models.trial_members import TrialMember
+    from app.models.roles import Role
+
     # Check permission
-    if not is_critical_trial_role(member.trial_role):
+    role_stmt = (
+        select(Role.name)
+        .join(TrialMember, TrialMember.role_id == Role.id)
+        .where(
+            TrialMember.member_id == member.id,
+            TrialMember.trial_id == trial_id
+        )
+    )
+    role_result = await db.execute(role_stmt)
+    trial_role = role_result.scalars().first()
+
+    if not is_critical_trial_role(trial_role):
         raise HTTPException(
             status_code=403, detail="Only PI and CRC can complete visits"
         )
@@ -79,4 +94,27 @@ async def complete_visit(
     await db.commit()
     await db.refresh(visit)
 
-    return visit
+    # Fetch doctor for response
+    doctor = (await db.execute(select(Member).where(Member.id == visit.doctor_id))).scalars().first()
+
+    return PatientVisitResponse(
+        id=visit.id,
+        patient_id=visit.patient_id,
+        trial_id=visit.trial_id,
+        doctor_id=visit.doctor_id,
+        visit_date=visit.visit_date,
+        visit_time=visit.visit_time,
+        visit_type=visit.visit_type,
+        status=visit.status,
+        duration_minutes=visit.duration_minutes,
+        visit_number=visit.visit_number,
+        notes=visit.notes,
+        next_visit_date=visit.next_visit_date,
+        location=visit.location,
+        actual_date=visit.actual_date,
+        created_at=visit.created_at,
+        updated_at=visit.updated_at,
+        created_by=visit.created_by,
+        cost_data=visit.cost_data,
+        doctor_name=doctor.name if doctor else None,
+    )

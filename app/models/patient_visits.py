@@ -79,6 +79,7 @@ class PatientVisit(Base):
     notes: Mapped[Optional[str]] = Column(Text, nullable=True)
     next_visit_date: Mapped[Optional[date]] = Column(Date, nullable=True)
     location: Mapped[Optional[str]] = Column(Text, nullable=True)
+    actual_date: Mapped[Optional[date]] = Column(Date, nullable=True)
     created_at: Mapped[Optional[datetime]] = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

@@ -45,3 +45,4 @@ from .qa_repository import QARepositoryItem
 
 # Tier 6
 from .visit_documents import VisitDocument
+from .visit_activities import VisitActivity

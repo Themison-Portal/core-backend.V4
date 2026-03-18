@@ -22,6 +22,7 @@ class PatientVisitBase(BaseContract):
     notes: Optional[str] = None
     next_visit_date: Optional[date] = None
     location: Optional[str] = None
+    actual_date: Optional[date] = None
     cost_data: Optional[Dict[str, Any]] = None
 
 
