@@ -3,7 +3,7 @@ name: Deploy to Cloud Run
 on:
   push:
     branches:
-      - main # Change this to the branch you want to deploy automatically
+      - main
 
 env:
   PROJECT_ID: braided-visitor-484216-i0
@@ -24,7 +24,6 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          # You will need to add GCP_SA_KEY as a repository secret in GitHub
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
       - name: Set up Cloud SDK
@@ -37,11 +36,7 @@ jobs:
       - name: Build and Push Docker image
         run: |
           IMAGE_PATH="${{ env.ARTIFACT_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          
-          # Build image
           docker build -t "$IMAGE_PATH" .
-          
-          # Push image
           docker push "$IMAGE_PATH"
 
       - name: Deploy to Cloud Run
@@ -52,4 +47,4 @@ jobs:
             --image "$IMAGE_PATH" \
             --region ${{ env.REGION }} \
             --project ${{ env.PROJECT_ID }} \
-            # (Note: Existing environment variables and traffic settings in Cloud Run are preserved automatically)
+            --set-env-vars "USE_GRPC_RAG=true,RAG_SERVICE_ADDRESS=rag-service-eu-573lfhdaza-ew.a.run.app:443"
