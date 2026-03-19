@@ -32,11 +32,13 @@ from app.api.routes.api.patient_documents import router as patient_documents_rou
 from app.api.routes.api.chat_sessions import router as chat_sessions_router
 from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
-from app.api.routes.api.threads import router as chat_threads_router
-from app.api.routes.api.tasks import router as tasks_router
-from app.api.routes.api.activities import router as trial_activities_router
-from app.api.routes.api.complete_visit import router as complete_visit_router
-from app.api.routes.api.visit_activities import router as visit_activities_router
+# TODO: Thread-based chat feature is incomplete (missing DB tables).
+# from app.api.routes.api.threads import router as chat_threads_router
+# TODO: These features are incomplete (missing DB tables: tasks, activity_types, visit_activities).
+# from app.api.routes.api.tasks import router as tasks_router
+# from app.api.routes.api.activities import router as trial_activities_router
+# from app.api.routes.api.complete_visit import router as complete_visit_router
+# from app.api.routes.api.visit_activities import router as visit_activities_router
 
 from contextlib import asynccontextmanager
 from redis.asyncio import Redis
@@ -164,11 +166,12 @@ app.include_router(trials_router, prefix="/api/trials", tags=["trials"])
 app.include_router(
     trial_members_router, prefix="/api/trial-members", tags=["trial-members"]
 )
-app.include_router(
-    trial_activities_router,
-    prefix="/api/trials/{trial_id}/activities",
-    tags=["trial-activities"],
-)
+# TODO: Incomplete feature (missing DB tables).
+# app.include_router(
+#     trial_activities_router,
+#     prefix="/api/trials/{trial_id}/activities",
+#     tags=["trial-activities"],
+# )
 app.include_router(
     trial_documents_router, prefix="/api/trial-documents", tags=["trial-documents"]
 )
@@ -177,13 +180,14 @@ app.include_router(
     trial_patients_router, prefix="/api/trial-patients", tags=["trial-patients"]
 )
 app.include_router(patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"])
-app.include_router(
-    complete_visit_router, prefix="/api/patient-visits", tags=["patient-visits"]
-)
-app.include_router(
-    visit_activities_router, prefix="/api/patient-visits", tags=["patient-visits"]
-)
-app.include_router(tasks_router, prefix="/api/tasks", tags=["tasks"])
+# TODO: Incomplete features (missing DB tables).
+# app.include_router(
+#     complete_visit_router, prefix="/api/patient-visits", tags=["patient-visits"]
+# )
+# app.include_router(
+#     visit_activities_router, prefix="/api/patient-visits", tags=["patient-visits"]
+# )
+# app.include_router(tasks_router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(
     patient_documents_router,
     prefix="/api/patient-documents",
@@ -195,9 +199,10 @@ app.include_router(
 app.include_router(
     chat_messages_router, prefix="/api/chat-messages", tags=["chat-messages"]
 )
-app.include_router(
-    chat_threads_router, prefix="/api/chat-threads", tags=["chat-threads"]
-)
+# TODO: Thread-based chat feature is incomplete (missing DB tables).
+# app.include_router(
+#     chat_threads_router, prefix="/api/chat-threads", tags=["chat-threads"]
+# )
 app.include_router(
     qa_repository_router, prefix="/api/qa-repository", tags=["qa-repository"]
 )
