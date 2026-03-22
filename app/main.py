@@ -32,13 +32,13 @@ from app.api.routes.api.patient_documents import router as patient_documents_rou
 from app.api.routes.api.chat_sessions import router as chat_sessions_router
 from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
+
 # TODO: Thread-based chat feature is incomplete (missing DB tables).
-# from app.api.routes.api.threads import router as chat_threads_router
-# TODO: These features are incomplete (missing DB tables: tasks, activity_types, visit_activities).
-# from app.api.routes.api.tasks import router as tasks_router
-# from app.api.routes.api.activities import router as trial_activities_router
-# from app.api.routes.api.complete_visit import router as complete_visit_router
-# from app.api.routes.api.visit_activities import router as visit_activities_router
+from app.api.routes.api.threads import router as chat_threads_router
+from app.api.routes.api.tasks import router as tasks_router
+from app.api.routes.api.activities import router as trial_activities_router
+from app.api.routes.api.complete_visit import router as complete_visit_router
+from app.api.routes.api.visit_activities import router as visit_activities_router
 
 from contextlib import asynccontextmanager
 from redis.asyncio import Redis
@@ -128,12 +128,15 @@ def root():
 @app.get("/debug-config")
 def debug_config():
     from app.config import get_settings
+
     settings = get_settings()
     return {
         "upload_api_key_len": len(settings.upload_api_key),
-        "upload_api_key_prefix": settings.upload_api_key[:3] if settings.upload_api_key else "EMPTY",
+        "upload_api_key_prefix": (
+            settings.upload_api_key[:3] if settings.upload_api_key else "EMPTY"
+        ),
         "rag_address": settings.rag_service_address,
-        "use_grpc": settings.use_grpc_rag
+        "use_grpc": settings.use_grpc_rag,
     }
 
 
@@ -166,12 +169,12 @@ app.include_router(trials_router, prefix="/api/trials", tags=["trials"])
 app.include_router(
     trial_members_router, prefix="/api/trial-members", tags=["trial-members"]
 )
-# TODO: Incomplete feature (missing DB tables).
-# app.include_router(
-#     trial_activities_router,
-#     prefix="/api/trials/{trial_id}/activities",
-#     tags=["trial-activities"],
-# )
+
+app.include_router(
+    trial_activities_router,
+    prefix="/api/trials/{trial_id}/activities",
+    tags=["trial-activities"],
+)
 app.include_router(
     trial_documents_router, prefix="/api/trial-documents", tags=["trial-documents"]
 )
@@ -179,15 +182,17 @@ app.include_router(patients_router, prefix="/api/patients", tags=["patients"])
 app.include_router(
     trial_patients_router, prefix="/api/trial-patients", tags=["trial-patients"]
 )
-app.include_router(patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"])
-# TODO: Incomplete features (missing DB tables).
-# app.include_router(
-#     complete_visit_router, prefix="/api/patient-visits", tags=["patient-visits"]
-# )
-# app.include_router(
-#     visit_activities_router, prefix="/api/patient-visits", tags=["patient-visits"]
-# )
-# app.include_router(tasks_router, prefix="/api/tasks", tags=["tasks"])
+app.include_router(
+    patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"]
+)
+
+app.include_router(
+    complete_visit_router, prefix="/api/patient-visits", tags=["patient-visits"]
+)
+app.include_router(
+    visit_activities_router, prefix="/api/patient-visits", tags=["patient-visits"]
+)
+app.include_router(tasks_router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(
     patient_documents_router,
     prefix="/api/patient-documents",

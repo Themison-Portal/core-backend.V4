@@ -18,7 +18,9 @@ class Task(Base):
     assigned_to = Column(UUID(as_uuid=True), ForeignKey("members.id"), nullable=True)
     due_date = Column(DateTime, nullable=True)
     patient_id = Column(UUID(as_uuid=True), ForeignKey("patients.id"), nullable=True)
-    visit_id = Column(UUID(as_uuid=True), ForeignKey("visits.id"), nullable=True)
+    visit_id = Column(
+        UUID(as_uuid=True), ForeignKey("patient_visits.id"), nullable=True
+    )
     activity_type_id = Column(
         UUID(as_uuid=True), ForeignKey("activity_types.id"), nullable=True
     )
@@ -27,8 +29,8 @@ class Task(Base):
     deleted_at = Column(DateTime, nullable=True)
 
     # relationships
-    trial = relationship("Trial", back_populates="tasks")
-    assigned_user = relationship("Member", back_populates="tasks")
-    patient = relationship("Patient", back_populates="tasks")
-    visit = relationship("Visit", back_populates="tasks")
-    activity_type = relationship("ActivityType", back_populates="tasks")
+    # trial = relationship("Trial", back_populates="tasks")
+    # assigned_user = relationship("Member", back_populates="tasks")
+    # patient = relationship("Patient", back_populates="tasks")
+    # visit = relationship("Visit", back_populates="tasks")
+    # activity_type = relationship("ActivityType", back_populates="tasks")
