@@ -22,6 +22,11 @@ from app.models.documents import Document
 router = APIRouter()
 
 
+# ============================================================================
+# My Organization (accessible by both staff and admin)
+# ============================================================================
+
+
 @router.get("/me", response_model=OrganizationResponse)
 async def get_my_organization(
     member: Member = Depends(get_current_member),
@@ -96,7 +101,6 @@ async def get_organization_metrics(
         )
     ).scalar_one()
 
-    # Documents count: trial_documents linked to this org's trials
     documents_count = (
         await db.execute(
             select(func.count())
@@ -118,9 +122,41 @@ async def get_organization_metrics(
     )
 
 
-# -----------------------
-# Admin endpoints for managing any org
-# -----------------------
+# ============================================================================
+# Console / Staff endpoints — staff only
+# ============================================================================
+
+
+@router.get("/", response_model=list[OrganizationResponse])
+async def list_organizations(
+    current_user: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all organizations — staff only."""
+    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+    if current_user.default_role != "staff":
+        raise HTTPException(status_code=403, detail="Staff access only")
+
+    result = await db.execute(select(Organization))
+    return result.scalars().all()
+
+
+@router.post("/", response_model=OrganizationResponse, status_code=201)
+async def create_organization(
+    payload: OrganizationUpdate,
+    current_user: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new organization — staff only."""
+    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+    if current_user.default_role != "staff":
+        raise HTTPException(status_code=403, detail="Staff access only")
+
+    org = Organization(**payload.model_dump())
+    db.add(org)
+    await db.commit()
+    await db.refresh(org)
+    return org
 
 
 @router.get("/{org_id}", response_model=OrganizationResponse)
@@ -131,16 +167,20 @@ async def get_organization_by_id(
 ):
     """
     Get organization by ID.
-    Only accessible by admin/superadmin roles.
+    Staff can view any org.
+    Admin can only view their own org.
     """
-    if current_user.org_role not in ["superadmin", "admin"]:
+    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+    if (
+        current_user.default_role != "staff"
+        and str(current_user.organization_id) != org_id
+    ):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = result.scalars().first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
-
     return org
 
 
@@ -153,9 +193,46 @@ async def update_organization_by_id(
 ):
     """
     Update organization by ID.
-    Only accessible by admin/superadmin roles.
+    Staff can update any org.
+    Admin can only update their own org.
     """
-    if current_user.org_role not in ["superadmin", "admin"]:
+    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+    if (
+        current_user.default_role != "staff"
+        and str(current_user.organization_id) != org_id
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    result = await db.execute(select(Organization).where(Organization.id == org_id))
+    org = result.scalars().first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(org, key, value)
+
+    await db.commit()
+    await db.refresh(org)
+    return org
+
+
+@router.patch("/{org_id}", response_model=OrganizationResponse)
+async def patch_update_organization(
+    org_id: str,
+    payload: OrganizationUpdate,
+    current_user: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Partial update for organization.
+    Staff can patch any org.
+    Admin can only patch their own org.
+    """
+    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+    if (
+        current_user.default_role != "staff"
+        and str(current_user.organization_id) != org_id
+    ):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     result = await db.execute(select(Organization).where(Organization.id == org_id))
@@ -179,13 +256,12 @@ async def delete_organization_member(
 ):
     """
     Delete a member from the organization.
-    Only allow if current_user is staff/admin/superadmin.
+    Both staff and admin can delete members.
     """
-    # Step 0: Check permissions (only superadmin/admin can delete)
-    if current_user.org_role not in ["superadmin", "admin"]:
+    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+    if current_user.default_role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete members")
 
-    # Step 1: Fetch the member to delete
     result = await db.execute(
         select(Member).where(
             Member.id == member_id,
@@ -196,111 +272,39 @@ async def delete_organization_member(
     if not member_to_delete:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # Step 2: Prevent deleting the last superadmin
-    if member_to_delete.org_role == "superadmin":
-        superadmin_count = (
+    # ✅ Fixed: was checking org_role == "superadmin" which doesn't exist
+    # Prevent deleting the last admin in an org
+    if member_to_delete.default_role == "admin":
+        admin_count = (
             await db.execute(
                 select(func.count())
                 .select_from(Member)
                 .where(
                     Member.organization_id == current_user.organization_id,
-                    Member.org_role == "superadmin",
+                    Member.default_role == "admin",
                 )
             )
         ).scalar_one()
-        if superadmin_count <= 1:
+        if admin_count <= 1:
             raise HTTPException(
-                status_code=400, detail="Cannot remove the last superadmin"
+                status_code=400,
+                detail="Cannot remove the last admin of an organization",
             )
 
-    # Step 3: Optional - save snapshot (you can use JSON column if needed)
+    # ✅ Fixed: was using member_to_delete.first_name/last_name
+    # which don't exist on Member model — only name exists
     user_snapshot = {
-        "id": member_to_delete.id,
+        "id": str(member_to_delete.id),
         "email": member_to_delete.email,
-        "first_name": member_to_delete.first_name,
-        "last_name": member_to_delete.last_name,
-        "role": member_to_delete.org_role,
-        "deleted_at": str(func.now()),
+        "name": member_to_delete.name,  # ✅ Member model has 'name' not first/last
+        "role": member_to_delete.default_role,
     }
-    # You could store snapshot in a separate table if needed
 
-    # Step 4: Delete the member (soft delete recommended)
-    member_to_delete.deleted_at = func.now()  # soft delete
+    member_to_delete.deleted_at = func.now()
     await db.commit()
     await db.refresh(member_to_delete)
 
     return {"message": "Member deleted successfully", "snapshot": user_snapshot}
-
-
-# -----------------------
-# Console / Admin endpoints
-# -----------------------
-
-
-@router.get("/", response_model=list[OrganizationResponse])
-async def list_organizations(
-    current_user: Member = Depends(get_current_member),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    List all organizations (console staff).
-    """
-    if current_user.org_role not in ["superadmin", "admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    result = await db.execute(select(Organization))
-    organizations = result.scalars().all()
-
-    return organizations
-
-
-@router.post("/", response_model=OrganizationResponse, status_code=201)
-async def create_organization(
-    payload: OrganizationUpdate,
-    current_user: Member = Depends(get_current_member),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Create a new organization.
-    """
-    if current_user.org_role not in ["superadmin", "admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    org = Organization(**payload.model_dump())
-
-    db.add(org)
-    await db.commit()
-    await db.refresh(org)
-
-    return org
-
-
-@router.patch("/{org_id}", response_model=OrganizationResponse)
-async def patch_update_organization(
-    org_id: str,
-    payload: OrganizationUpdate,
-    current_user: Member = Depends(get_current_member),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Partial update for organization (PATCH used by frontend).
-    """
-    if current_user.org_role not in ["superadmin", "admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    result = await db.execute(select(Organization).where(Organization.id == org_id))
-    org = result.scalars().first()
-
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
-    for key, value in payload.model_dump(exclude_unset=True).items():
-        setattr(org, key, value)
-
-    await db.commit()
-    await db.refresh(org)
-
-    return org
 
 
 @router.delete("/{org_id}/members/{member_id}")
@@ -310,10 +314,9 @@ async def remove_member_from_org(
     current_user: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Remove member from organization (console).
-    """
-    if current_user.org_role not in ["superadmin", "admin"]:
+    """Remove member from organization — staff and admin."""
+    # ✅ Fixed: was org_role not in ["staff", "admin"]
+    if current_user.default_role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     result = await db.execute(
@@ -322,14 +325,11 @@ async def remove_member_from_org(
             Member.organization_id == org_id,
         )
     )
-
     member = result.scalars().first()
-
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
     member.deleted_at = func.now()
-
     await db.commit()
 
     return {"message": "Member removed successfully"}

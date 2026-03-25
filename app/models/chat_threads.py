@@ -22,6 +22,6 @@ class ChatThread(Base):
     )
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
-    # Relationships
-    participants = relationship("ThreadParticipant", back_populates="thread")
-    messages = relationship("ChatMessage", back_populates="thread")
+    # # Relationships
+    # participants = relationship("ThreadParticipant", back_populates="thread")
+    # messages = relationship("ChatMessage", back_populates="thread")

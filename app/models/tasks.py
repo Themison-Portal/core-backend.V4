@@ -1,5 +1,5 @@
 # app/models/tasks.py
-from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey, text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -9,7 +9,7 @@ from .base import Base  # your declarative base
 class Task(Base):
     __tablename__ = "tasks"
 
-    id = Column(UUID(as_uuid=True), primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     trial_id = Column(UUID(as_uuid=True), ForeignKey("trials.id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
@@ -24,6 +24,7 @@ class Task(Base):
     activity_type_id = Column(
         UUID(as_uuid=True), ForeignKey("activity_types.id"), nullable=True
     )
+    created_by = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)

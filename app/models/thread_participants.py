@@ -11,9 +11,9 @@ class ThreadParticipant(Base):
     __tablename__ = "thread_participants"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    thread_id = Column(
-        UUID(as_uuid=True), ForeignKey("chat_threads.id"), nullable=False
-    )
+    # thread_id = Column(
+    #     UUID(as_uuid=True), ForeignKey("chat_threads.id"), nullable=False
+    # )
     user_id = Column(
         UUID(as_uuid=True), ForeignKey("members.profile_id"), nullable=False
     )
@@ -21,5 +21,5 @@ class ThreadParticipant(Base):
         UUID(as_uuid=True), ForeignKey("chat_messages.id"), nullable=True
     )
 
-    # Relationships
-    thread = relationship("ChatThread", back_populates="participants")
+    # # Relationships
+    # thread = relationship("ChatThread", back_populates="participants")

@@ -124,7 +124,7 @@ async def update_visit_schedule_template(
     db: AsyncSession = Depends(get_db),
 ):
     # Only admins/superadmins can update
-    if member.org_role not in ["superadmin", "admin"]:
+    if member.default_role not in ["admin", "staff"]:
         raise HTTPException(status_code=403, detail="Only admins can update template")
 
     template = body.dict()
