@@ -9,7 +9,7 @@ from app.models.trials import Trial
 from app.models.trial_members import TrialMember
 from app.models.members import Member
 
-ADMIN_ROLES = {"superadmin", "admin"}
+ADMIN_ROLES = {"superadmin", "admin", "staff"}
 
 
 async def get_trial_with_access(
@@ -31,7 +31,7 @@ async def get_trial_with_access(
         raise HTTPException(status_code=404, detail="Trial not found")
 
     # Admin check
-    if member.org_role in ADMIN_ROLES:
+    if member.default_role in ADMIN_ROLES:
         return trial
 
     # Trial membership check

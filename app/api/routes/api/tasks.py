@@ -65,10 +65,16 @@ async def list_tasks(
             TaskResponse(
                 id=task.id,
                 trial_id=task.trial_id,
+                title=task.title,
+                description=task.description,
                 status=task.status,
+                priority=task.priority,
                 due_date=task.due_date,
                 assigned_to=task.assigned_to,
                 assigned_user=assigned_user,
+                patient_id=task.patient_id,
+                visit_id=task.visit_id,
+                activity_type_id=task.activity_type_id,
                 created_at=task.created_at,
                 updated_at=task.updated_at,
             )

@@ -7,6 +7,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 
 from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, relationship
 
@@ -29,6 +30,7 @@ class TrialMember(Base):
     start_date: Mapped[Optional[date]] = Column(Date, default=date.today)
     end_date: Mapped[Optional[date]] = Column(Date, nullable=True)
     is_active: Mapped[Optional[bool]] = Column(Boolean, default=True)
+    settings: Mapped[Optional[dict]] = Column(JSON, default=dict, nullable=True)
     created_at: Mapped[Optional[datetime]] = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

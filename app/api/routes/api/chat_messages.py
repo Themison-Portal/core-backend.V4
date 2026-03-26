@@ -104,7 +104,7 @@ async def update_message(
         raise HTTPException(status_code=404, detail="Chat message not found")
 
     # Optional: Only author or admin can update
-    if msg.user_id != member.id and member.org_role not in ["superadmin", "admin"]:
+    if msg.user_id != member.id and member.default_role not in ["admin", "staff"]:
         raise HTTPException(
             status_code=403, detail="Not authorized to update this message"
         )
@@ -143,7 +143,7 @@ async def delete_message(
         raise HTTPException(status_code=404, detail="Chat message not found")
 
     # Optional: Only author or admin can delete
-    if msg.user_id != member.id and member.org_role not in ["superadmin", "admin"]:
+    if msg.user_id != member.id and member.default_role not in ["admin", "staff"]:
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this message"
         )

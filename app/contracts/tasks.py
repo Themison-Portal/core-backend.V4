@@ -2,37 +2,37 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-# -----------------------
-# Assigned User Info
-# -----------------------
 class AssignedUser(BaseModel):
     id: UUID
-    full_name: str
-
-
-# -----------------------
-# Task Response Model
-# -----------------------
-class TaskResponse(BaseModel):
-    id: UUID
-    trial_id: UUID
-    status: str
-    due_date: Optional[date]
-    assigned_to: Optional[UUID]
-    assigned_user: Optional[AssignedUser]
-    created_at: datetime
-    updated_at: datetime
+    full_name: Optional[str] = None
 
     class Config:
         orm_mode = True
 
 
-# -----------------------
-# Task Create Model
-# -----------------------
+class TaskResponse(BaseModel):
+    id: UUID
+    trial_id: UUID
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: str
+    priority: Optional[str] = None
+    due_date: Optional[date] = None
+    assigned_to: Optional[UUID] = None
+    assigned_user: Optional[AssignedUser] = None
+    patient_id: Optional[UUID] = None
+    visit_id: Optional[UUID] = None
+    activity_type_id: Optional[UUID] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
+
+
 class TaskCreate(BaseModel):
     trial_id: UUID
     title: str
@@ -49,19 +49,16 @@ class TaskCreate(BaseModel):
         orm_mode = True
 
 
-# -----------------------
-# Task Update Model
-# -----------------------
 class TaskUpdate(BaseModel):
-    title: Optional[str]
-    description: Optional[str]
-    status: Optional[str]
-    priority: Optional[str]
-    assigned_to: Optional[UUID]
-    due_date: Optional[date]
-    patient_id: Optional[UUID]
-    visit_id: Optional[UUID]
-    activity_type_id: Optional[UUID]
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    assigned_to: Optional[UUID] = None
+    due_date: Optional[date] = None
+    patient_id: Optional[UUID] = None
+    visit_id: Optional[UUID] = None
+    activity_type_id: Optional[UUID] = None
 
     class Config:
         orm_mode = True

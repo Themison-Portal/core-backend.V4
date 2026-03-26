@@ -32,6 +32,7 @@ class TrialMemberResponse(TrialMemberBase):
     permission_level: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    settings: Optional[dict] = None
 
 
 class PendingMemberBase(BaseContract):

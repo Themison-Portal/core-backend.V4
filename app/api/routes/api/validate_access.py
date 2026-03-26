@@ -46,10 +46,10 @@ async def validate_trial_access_bulk(
 
     # Fetch org roles of requested users
     result = await db.execute(
-        select(Member.id, Member.org_role).where(Member.id.in_(user_ids))
+        select(Member.id, Member.default_role).where(Member.id.in_(user_ids))
     )
     org_members = result.all()
-    org_roles = {m.id: m.org_role for m in org_members}
+    org_roles = {m.id: m.default_role for m in org_members}
 
     valid_user_ids = []
     invalid_user_ids = []

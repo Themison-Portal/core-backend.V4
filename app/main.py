@@ -34,7 +34,7 @@ from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
 
 # TODO: Thread-based chat feature is incomplete (missing DB tables).
-from app.api.routes.api.threads import router as chat_threads_router
+# from app.api.routes.api.threads import router as chat_threads_router
 from app.api.routes.api.tasks import router as tasks_router
 from app.api.routes.api.activities import router as trial_activities_router
 from app.api.routes.api.complete_visit import router as complete_visit_router
@@ -98,6 +98,7 @@ allowed_origins = [
     "https://core-frontend-preview.vercel.app",
     "http://localhost:8080",
     "http://localhost:5173",
+    "http://localhost:3000",
 ]
 
 # Add FRONTEND_URL from environment if set
