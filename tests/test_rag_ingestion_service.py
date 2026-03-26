@@ -9,6 +9,8 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
 
+docling = pytest.importorskip("docling", reason="docling package not installed")
+
 from langchain_core.documents import Document
 
 

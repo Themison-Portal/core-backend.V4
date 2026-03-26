@@ -24,4 +24,5 @@ class ChatThread(Base):
 
     # Relationships
     participants = relationship("ThreadParticipant", back_populates="thread")
-    messages = relationship("ChatMessage", back_populates="thread")
+    # TODO: ChatMessage doesn't have thread_id FK yet (incomplete feature)
+    # messages = relationship("ChatMessage", back_populates="thread")

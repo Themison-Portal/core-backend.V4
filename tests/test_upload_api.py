@@ -7,6 +7,9 @@ Actual processing happens asynchronously. Use /upload/status/{job_id} to check p
 """
 
 import pytest
+
+docling = pytest.importorskip("docling", reason="docling package not installed")
+
 from datetime import datetime
 from uuid import UUID
 from unittest.mock import MagicMock, AsyncMock, patch

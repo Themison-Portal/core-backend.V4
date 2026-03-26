@@ -150,6 +150,10 @@ class TestDocumentForeignKeyConstraint:
         assert result.scalar() == 0
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        not __import__("importlib").util.find_spec("docling"),
+        reason="docling package not installed",
+    )
     async def test_ingestion_service_fails_without_document(self, db_session: AsyncSession):
         """
         Call RagIngestionService._insert_docling_chunks() with a non-existent document_id.
