@@ -9,11 +9,8 @@ from typing import Optional
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, Text, Time
 from sqlalchemy.dialects.postgresql import ENUM, JSON, UUID
-from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
 
-if TYPE_CHECKING:
-    from app.models.visit_activities import VisitActivity
 
 from app.models.members import Member
 from app.models.trials import Trial
