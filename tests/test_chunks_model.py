@@ -11,6 +11,12 @@ from datetime import datetime
 from sqlalchemy import Computed, inspect
 from sqlalchemy.dialects.postgresql import TSVECTOR
 
+try:
+    import docling
+    HAS_DOCLING = True
+except ImportError:
+    HAS_DOCLING = False
+
 
 class TestDocumentChunkDoclingModel:
     """Test DocumentChunkDocling model structure."""
@@ -126,6 +132,7 @@ class TestContentTsvExcludedFromInsert:
             f"content_tsv should not be in INSERT statement: {sql_string}"
 
 
+@pytest.mark.skipif(not HAS_DOCLING, reason="docling package not installed")
 class TestIngestionServiceDoesNotSetContentTsv:
     """Test that RagIngestionService doesn't try to set content_tsv."""
 

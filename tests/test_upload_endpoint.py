@@ -350,26 +350,29 @@ class TestBackgroundTaskRouting:
         mock_redis.set = AsyncMock()
         mock_redis.get = AsyncMock(return_value=None)
 
-        # Mock both paths and the job service import
-        with patch("app.api.routes.upload._ingest_via_grpc", new_callable=AsyncMock) as mock_grpc:
-            with patch("app.api.routes.upload._ingest_via_local", new_callable=AsyncMock) as mock_local:
-                with patch("app.api.routes.upload.JobStatusService") as mock_job_service_class:
-                    mock_job_service = MagicMock()
-                    mock_job_service.fail_job = AsyncMock()
-                    mock_job_service_class.return_value = mock_job_service
+        # Mock both paths, the job service import, and the docling import inside _run_ingestion_task
+        with patch("app.api.routes.upload._ingest_via_grpc", new_callable=AsyncMock) as mock_grpc, \
+             patch("app.api.routes.upload._ingest_via_local", new_callable=AsyncMock) as mock_local, \
+             patch("app.api.routes.upload.JobStatusService") as mock_job_service_class, \
+             patch.dict("sys.modules", {
+                 "app.services.doclingRag.rag_ingestion_service": MagicMock(),
+             }):
+            mock_job_service = MagicMock()
+            mock_job_service.fail_job = AsyncMock()
+            mock_job_service_class.return_value = mock_job_service
 
-                    await _run_ingestion_task(
-                        job_id="test-job",
-                        document_url="https://example.com/test.pdf",
-                        document_id=uuid4(),
-                        chunk_size=750,
-                        redis_client=mock_redis,
-                        use_grpc=True,
-                        grpc_address="localhost:50051",
-                    )
+            await _run_ingestion_task(
+                job_id="test-job",
+                document_url="https://example.com/test.pdf",
+                document_id=uuid4(),
+                chunk_size=750,
+                redis_client=mock_redis,
+                use_grpc=True,
+                grpc_address="localhost:50051",
+            )
 
-                    mock_grpc.assert_called_once()
-                    mock_local.assert_not_called()
+            mock_grpc.assert_called_once()
+            mock_local.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_uses_local_when_flag_disabled(self):
@@ -378,25 +381,28 @@ class TestBackgroundTaskRouting:
         mock_redis.set = AsyncMock()
         mock_redis.get = AsyncMock(return_value=None)
 
-        with patch("app.api.routes.upload._ingest_via_grpc", new_callable=AsyncMock) as mock_grpc:
-            with patch("app.api.routes.upload._ingest_via_local", new_callable=AsyncMock) as mock_local:
-                with patch("app.api.routes.upload.JobStatusService") as mock_job_service_class:
-                    mock_job_service = MagicMock()
-                    mock_job_service.fail_job = AsyncMock()
-                    mock_job_service_class.return_value = mock_job_service
+        with patch("app.api.routes.upload._ingest_via_grpc", new_callable=AsyncMock) as mock_grpc, \
+             patch("app.api.routes.upload._ingest_via_local", new_callable=AsyncMock) as mock_local, \
+             patch("app.api.routes.upload.JobStatusService") as mock_job_service_class, \
+             patch.dict("sys.modules", {
+                 "app.services.doclingRag.rag_ingestion_service": MagicMock(),
+             }):
+            mock_job_service = MagicMock()
+            mock_job_service.fail_job = AsyncMock()
+            mock_job_service_class.return_value = mock_job_service
 
-                    await _run_ingestion_task(
-                        job_id="test-job",
-                        document_url="https://example.com/test.pdf",
-                        document_id=uuid4(),
-                        chunk_size=750,
-                        redis_client=mock_redis,
-                        use_grpc=False,
-                        grpc_address="localhost:50051",
-                    )
+            await _run_ingestion_task(
+                job_id="test-job",
+                document_url="https://example.com/test.pdf",
+                document_id=uuid4(),
+                chunk_size=750,
+                redis_client=mock_redis,
+                use_grpc=False,
+                grpc_address="localhost:50051",
+            )
 
-                    mock_local.assert_called_once()
-                    mock_grpc.assert_not_called()
+            mock_local.assert_called_once()
+            mock_grpc.assert_not_called()
 
 
 # =============================================================================
