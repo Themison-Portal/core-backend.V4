@@ -1,0 +1,64 @@
+﻿On branch fix/cloud-run-deployment-stability
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   Dockerfile
+	modified:   HANDOFF_INSTRUCTIONS.md
+	modified:   app/main.py
+	deleted:    roles.sql
+	modified:   schema.sql
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.dockerignore
+	.env.deploy
+	.env.production
+	DATABASE_HANDOFF.md
+	DB-DEPLOY-README.md
+	DEPLOYMENT_ACCESS.md
+	DEPLOY_NOW.md
+	Deployment_Fixes_Package.zip
+	EU-SETUP-FIX.md
+	EUROPE-CONNECTION.txt
+	EUROPE-MIGRATION-GUIDE.md
+	EUROPE_DEPLOYMENT_PROOF.md
+	MIGRATION-COMPLETE.md
+	MIGRATION-FINAL-STATUS.md
+	anthropic_key.txt
+	backup.dump
+	cleanup-old-images.ps1
+	cloud-build-deploy-europe.ps1
+	create-secrets-eu.ps1
+	db_backup_script.sh
+	deploy-gcp.ps1
+	deploy-gcp.sh
+	deployment_fixes_temp/
+	docker-compose.prod.yml
+	export-db.sh
+	fix-europe-deployment.ps1
+	fix-image-push.ps1
+	git_diff.txt
+	git_diff_working.txt
+	git_status.txt
+	hello.yaml
+	images_list.json
+	import-db.sh
+	manual-setup-eu.sh
+	migrate-to-europe.ps1
+	migration details.md
+	move-repo-europe.ps1
+	openai_key.txt
+	openapi.json
+	pre-init.sql
+	requirements_minimal.txt
+	service-europe.yaml
+	service-status.json
+	service.yaml
+	service_config.json
+	service_utf8.yaml
+	setup-db-vm.ps1
+	setup-europe.sh
+	vm_access_key
+	vm_access_key.pub
+
+no changes added to commit (use "git add" and/or "git commit -a")

@@ -1,0 +1,9 @@
+INSERT 0 3
+                  id                  |           name           |  status  
+--------------------------------------+--------------------------+----------
+ 50000000-0000-0000-0000-000000000001 | BEACON-1 Phase III Study | active
+ 55555555-5555-5555-5555-555555555555 | Oncology Phase III       | active
+ 55555555-5555-5555-5555-555555555556 | Cardiology Phase II      | planning
+ 55555555-5555-5555-5555-555555555557 | Neurology Phase I        | planning
+(4 rows)
+

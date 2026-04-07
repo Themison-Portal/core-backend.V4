@@ -1,0 +1,14 @@
+﻿* 72a3f3e (origin/feature/endpoints-refactor) WIP: endpoints feature updates
+| * db65946 (origin/Enpoints) Docker file for backend and RAG services
+|/  
+* 9a07e05 Added Unit Tests and adjusted RAG endpoints
+| *   2e91a6d (HEAD -> fix/cloud-run-deployment-stability) Merge remote-tracking branch 'origin/Enpoints' into fix/cloud-run-deployment-stability
+| |\  
+| |/  
+|/|   
+* | 38a0f94 Clean up the env
+* | 7c0ea72 Decoupled Python backend and RAG microservice. Added Unit Tests
+* | b443cdf Fix for chunks
+* | 77a999c Fix the embedding column
+* | 696f060 Added endpoints to work with the new DB also added Unit Tests
+* | 6ab70af Added missed file

@@ -1,0 +1,78 @@
+﻿commit 72a3f3ea0e436bdec7d60bf5d0d54eb1b180bf4e
+Author: Kumari Thotapalli <t.kumari59@gmail.com>
+Date:   Tue Mar 3 21:04:36 2026 +0100
+
+    WIP: endpoints feature updates
+
+ app/api/routes/api/invitations.py | 105 ++++++++++++++++++++++++++++++--------
+ app/contracts/organization.py     |   2 +
+ app/models/organizations.py       |   5 +-
+ 3 files changed, 90 insertions(+), 22 deletions(-)
+
+commit db659469bef9e8ed557362d6baa12fae0c8d94ef
+Author: Sylwester Madej <madartsoft@gmail.com>
+Date:   Tue Mar 3 08:16:21 2026 +0000
+
+    Docker file for backend and RAG services
+
+ .claude/settings.local.json                        |  15 +
+ .dockerignore                                      |  18 +
+ .gitignore                                         |   3 +
+ Dockerfile                                         |  28 ++
+ PRODUCTION_SETUP.md                                | 409 +++++++++++++++++++++
+ app/api/routes/api/patient_documents.py            |   8 +-
+ app/api/routes/api/trial_documents.py              |  10 +-
+ app/api/routes/local_files.py                      |  30 ++
+ app/api/routes/storage/storage.py                  |   8 +-
+ app/api/routes/upload.py                           |  33 +-
+ app/clients/generated/__init__.py                  |   0
+ app/clients/generated/rag/__init__.py              |   0
+ app/clients/generated/rag/v1/__init__.py           |   0
+ app/clients/generated/rag/v1/rag_service_pb2.py    |  67 ++++
+ .../generated/rag/v1/rag_service_pb2_grpc.py       | 206 +++++++++++
+ app/clients/rag_client.py                          |   6 +-
+ app/dependencies/storage.py                        |  28 +-
+ app/main.py                                        |   2 +
+ app/models/documents.py                            |  10 +-
+ app/services/storage/base.py                       |  37 ++
+ app/services/storage/gcs_service.py                |   3 +-
+ app/services/storage/local_service.py              |  76 ++++
+ docker-compose.yml                                 |  53 ++-
+ docker/.env.docker                                 |  90 +++++
+ docker/seed.sql                                    | 173 +++++++++
+ tests/test_document_fk_constraint.py               | 196 ++++++++++
+ 26 files changed, 1483 insertions(+), 26 deletions(-)
+
+commit 9a07e05786a35a18a9269d9d9a6931702938f4f9
+Author: Sylwester Madej <madartsoft@gmail.com>
+Date:   Sat Feb 28 13:02:38 2026 +0000
+
+    Added Unit Tests and adjusted RAG endpoints
+
+ app/api/routes/upload.py                | 325 +++++++++++---
+ app/contracts/document.py               |  26 +-
+ app/dependencies/jobs.py                |  10 +-
+ app/services/jobs/__init__.py           |  15 +
+ app/services/jobs/job_status_service.py | 178 ++++++++
+ tests/test_grpc_routes.py               | 131 +++---
+ tests/test_job_status_service.py        | 236 +++++++++++
+ tests/test_upload_api.py                | 105 ++---
+ tests/test_upload_endpoint.py           | 731 ++++++++++++++++++++++++++++++++
+ tests/test_upload_errors.py             | 426 ++++++++-----------
+ 10 files changed, 1755 insertions(+), 428 deletions(-)
+
+commit 2e91a6d9473c00d1d648b36c591abc14cd4d242c
+Merge: 82405c2 38a0f94
+Author: jonaathan22 <jonaath.k@gmail.com>
+Date:   Fri Feb 27 21:11:38 2026 +0530
+
+    Merge remote-tracking branch 'origin/Enpoints' into fix/cloud-run-deployment-stability
+
+commit 38a0f94eda05b55f3ed8cfaedc88c539de6a51a9
+Author: Sylwester Madej <madartsoft@gmail.com>
+Date:   Thu Feb 26 17:37:28 2026 +0000
+
+    Clean up the env
+
+ .env.example | 53 +++++++++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 39 insertions(+), 14 deletions(-)

@@ -1,0 +1,160 @@
+﻿2026-03-04 14:43:07 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/
+2026-03-04 14:44:14 INFO:     Started server process [1]
+2026-03-04 14:44:14 INFO:     Waiting for application startup.
+2026-03-04 14:44:14 INFO:     Application startup complete.
+2026-03-04 14:44:14 INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+2026-03-04 14:44:14 INFO:     169.254.169.126:16120 - "GET / HTTP/1.1" 200 OK
+2026-03-04 14:45:02 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/docs
+2026-03-04 14:45:02 INFO:     169.254.169.126:7692 - "GET /docs HTTP/1.1" 200 OK
+2026-03-04 14:45:12 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/openapi.json
+2026-03-04 14:45:12 INFO:     169.254.169.126:56758 - "GET /openapi.json HTTP/1.1" 200 OK
+2026-03-04 14:45:12 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/docs
+2026-03-04 14:45:12 INFO:     169.254.169.126:56762 - "GET /docs HTTP/1.1" 200 OK
+2026-03-04 14:45:13 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/openapi.json
+2026-03-04 14:45:13 INFO:     169.254.169.126:56772 - "GET /openapi.json HTTP/1.1" 200 OK
+2026-03-04 14:46:56 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/docs
+2026-03-04 14:46:56 INFO:     169.254.169.126:13280 - "GET /docs HTTP/1.1" 200 OK
+2026-03-04 14:46:56 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/openapi.json
+2026-03-04 14:46:56 INFO:     169.254.169.126:13290 - "GET /openapi.json HTTP/1.1" 200 OK
+2026-03-04 14:47:02 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/
+2026-03-04 14:47:02 INFO:     169.254.169.126:47302 - "GET / HTTP/1.1" 200 OK
+2026-03-04 14:47:02 GET 404 https://core-backend-eu-573lfhdaza-ew.a.run.app/favicon.ico
+2026-03-04 14:47:02 INFO:     169.254.169.126:47318 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+2026-03-04 14:58:19 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/docs
+2026-03-04 14:58:19 INFO:     169.254.169.126:33424 - "GET /docs HTTP/1.1" 200 OK
+2026-03-04 14:58:19 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/openapi.json
+2026-03-04 14:58:19 INFO:     169.254.169.126:33436 - "GET /openapi.json HTTP/1.1" 200 OK
+2026-03-04 15:08:47 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/docs
+2026-03-04 15:08:47 INFO:     169.254.169.126:58652 - "GET /docs HTTP/1.1" 200 OK
+2026-03-04 15:09:22 GET 200 https://core-backend-eu-573lfhdaza-ew.a.run.app/
+2026-03-04 15:09:22 INFO:     169.254.169.126:44940 - "GET / HTTP/1.1" 200 OK
+2026-03-04 15:09:22 GET 404 https://core-backend-eu-573lfhdaza-ew.a.run.app/favicon.ico
+2026-03-04 15:09:22 INFO:     169.254.169.126:44942 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+2026-03-04 15:24:31 INFO:     Shutting down
+2026-03-04 15:24:31 INFO:     Waiting for application shutdown.
+2026-03-04 15:24:31 INFO:     Application shutdown complete.
+2026-03-04 15:24:31 INFO:     Finished server process [1]
+2026-03-04 17:04:14 GET 503 https://core-backend-eu-573lfhdaza-ew.a.run.app/openapi.json
+2026-03-04 17:05:20 Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 403, in hf_raise_for_status
+    response.raise_for_status()
+  File "/usr/local/lib/python3.11/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 429 Client Error: Too Many Requests for url: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json
+2026-03-04 17:05:20 The above exception was the direct cause of the following exception:
+2026-03-04 17:05:20 Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1550, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1467, in get_hf_file_metadata
+    r = _request_wrapper(
+        ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 283, in _request_wrapper
+    response = _request_wrapper(
+               ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 307, in _request_wrapper
+    hf_raise_for_status(response)
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 476, in hf_raise_for_status
+    raise _format(HfHubHTTPError, str(e), response) from e
+huggingface_hub.errors.HfHubHTTPError: 429 Client Error: Too Many Requests for url: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json (Amz CF ID: c8JSiYJ1UJE11C-2RaUm-3sKRC8uBTie2sy_lsXx-PrvAYVPelCDig==)
+2026-03-04 17:05:20 The above exception was the direct cause of the following exception:
+2026-03-04 17:05:20 Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/transformers/utils/hub.py", line 479, in cached_files
+    hf_hub_download(
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1014, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1121, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/usr/local/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1665, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+2026-03-04 17:05:20 The above exception was the direct cause of the following exception:
+2026-03-04 17:05:20 Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/main.py", line 433, in main
+    run(
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/main.py", line 606, in run
+    server.run()
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 75, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 79, in serve
+    await self._serve(sockets)
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 86, in _serve
+    config.load()
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/config.py", line 441, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/app/main.py", line 12, in <module>
+    from app.api.routes.auth import router as auth_router
+  File "/app/app/api/routes/__init__.py", line 3, in <module>
+    from .upload import router as upload_router
+  File "/app/app/api/routes/upload.py", line 13, in <module>
+    from app.dependencies.rag import get_rag_ingestion_service
+  File "/app/app/dependencies/rag.py", line 5, in <module>
+    from app.services.doclingRag.rag_ingestion_service import RagIngestionService
+  File "/app/app/services/doclingRag/rag_ingestion_service.py", line 19, in <module>
+    from app.services.utils.tokenizer import get_tokenizer
+  File "/app/app/services/utils/tokenizer.py", line 4, in <module>
+    _tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_MODEL_ID)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/transformers/models/auto/tokenization_auto.py", line 1109, in from_pretrained
+    config = AutoConfig.from_pretrained(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/transformers/models/auto/configuration_auto.py", line 1332, in from_pretrained
+    config_dict, unused_kwargs = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/transformers/configuration_utils.py", line 662, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/transformers/configuration_utils.py", line 721, in _get_config_dict
+    resolved_config_file = cached_file(
+                           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/transformers/utils/hub.py", line 322, in cached_file
+    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/transformers/utils/hub.py", line 553, in cached_files
+    raise OSError(
+OSError: We couldn't connect to 'https://huggingface.co' to load the files, and couldn't find them in the cached files.
+2026-03-04 17:05:20 Check your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.

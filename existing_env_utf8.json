@@ -1,0 +1,90 @@
+﻿{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "env": [
+              {
+                "name": "ENVIRONMENT",
+                "value": "production"
+              },
+              {
+                "name": "DATABASE_URL",
+                "value": "postgresql+asyncpg://postgres:postgres@10.132.0.2:5432/postgres"
+              },
+              {
+                "name": "database_url",
+                "value": "postgresql+asyncpg://postgres:postgres@10.132.0.2:5432/postgres"
+              },
+              {
+                "name": "REDIS_URL",
+                "value": "redis://10.132.0.2:6379"
+              },
+              {
+                "name": "SUPABASE_URL",
+                "value": "https://nidpneaqxghqueniodus.supabase.co"
+              },
+              {
+                "name": "supabase_url",
+                "value": "https://nidpneaqxghqueniodus.supabase.co"
+              },
+              {
+                "name": "SUPABASE_SERVICE_KEY",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pZHBuZWFxeGdocXVlbmlvZHVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODQ4Njg5MCwiZXhwIjoyMDg0MDYyODkwfQ.x_w0qmmAfLz12WmA_y7prqCoNreub_2BfS29jjx89p8"
+              },
+              {
+                "name": "supabase_service_key",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pZHBuZWFxeGdocXVlbmlvZHVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODQ4Njg5MCwiZXhwIjoyMDg0MDYyODkwfQ.x_w0qmmAfLz12WmA_y7prqCoNreub_2BfS29jjx89p8"
+              },
+              {
+                "name": "SUPABASE_ANON_KEY",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pZHBuZWFxeGdocXVlbmlvZHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0ODY4OTAsImV4cCI6MjA4NDA2Mjg5MH0.1MfRWL8mPm025Dq2LcdJ0-4VJJemClzreckiuFe_PJA"
+              },
+              {
+                "name": "FRONTEND_URL",
+                "value": "*"
+              },
+              {
+                "name": "OPENAI_API_KEY",
+                "value": "sk-proj-REDACTED"
+              },
+              {
+                "name": "openai_api_key",
+                "value": "sk-proj-REDACTED"
+              },
+              {
+                "name": "ANTHROPIC_API_KEY",
+                "value": "sk-ant-REDACTED"
+              },
+              {
+                "name": "anthropic_api_key",
+                "value": "sk-ant-REDACTED"
+              },
+              {
+                "name": "AUTH_DISABLED",
+                "value": "true"
+              },
+              {
+                "name": "auth_disabled",
+                "value": "true"
+              },
+              {
+                "name": "UPLOAD_API_KEY",
+                "value": "themison-test-key-2026"
+              },
+              {
+                "name": "USE_GRPC_RAG",
+                "value": "true"
+              },
+              {
+                "name": "RAG_SERVICE_ADDRESS",
+                "value": "rag-service-eu-573lfhdaza-ew.a.run.app:443"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

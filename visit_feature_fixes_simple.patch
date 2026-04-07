@@ -1,0 +1,237 @@
+diff --git a/app/api/routes/api/complete_visit.py b/app/api/routes/api/complete_visit.py
+index 61f6135..2e5d857 100644
+--- a/app/api/routes/api/complete_visit.py
++++ b/app/api/routes/api/complete_visit.py
+@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.dependencies.auth import get_current_member
+ from app.dependencies.db import get_db
++from app.contracts.patient_visit import PatientVisitResponse
+ from app.models.members import Member
+ from app.models.patient_visits import PatientVisit
+ from app.models.visit_activities import VisitActivity
+@@ -22,7 +23,7 @@ router = APIRouter()
+ 
+ @router.post(
+     "/trials/{trial_id}/patients/{patient_id}/visits/{visit_id}/complete",
+-    response_model=PatientVisit,
++    response_model=PatientVisitResponse,
+ )
+ async def complete_visit(
+     trial_id: str,
+@@ -36,8 +37,22 @@ async def complete_visit(
+     - Only PI/CRC can complete
+     - All activities must be completed or not_applicable
+     """
++    from app.models.trial_members import TrialMember
++    from app.models.roles import Role
++
+     # Check permission
+-    if not is_critical_trial_role(member.trial_role):
++    role_stmt = (
++        select(Role.name)
++        .join(TrialMember, TrialMember.role_id == Role.id)
++        .where(
++            TrialMember.member_id == member.id,
++            TrialMember.trial_id == trial_id
++        )
++    )
++    role_result = await db.execute(role_stmt)
++    trial_role = role_result.scalars().first()
++
++    if not is_critical_trial_role(trial_role):
+         raise HTTPException(
+             status_code=403, detail="Only PI and CRC can complete visits"
+         )
+@@ -79,4 +94,27 @@ async def complete_visit(
+     await db.commit()
+     await db.refresh(visit)
+ 
+-    return visit
++    # Fetch doctor for response
++    doctor = (await db.execute(select(Member).where(Member.id == visit.doctor_id))).scalars().first()
++
++    return PatientVisitResponse(
++        id=visit.id,
++        patient_id=visit.patient_id,
++        trial_id=visit.trial_id,
++        doctor_id=visit.doctor_id,
++        visit_date=visit.visit_date,
++        visit_time=visit.visit_time,
++        visit_type=visit.visit_type,
++        status=visit.status,
++        duration_minutes=visit.duration_minutes,
++        visit_number=visit.visit_number,
++        notes=visit.notes,
++        next_visit_date=visit.next_visit_date,
++        location=visit.location,
++        actual_date=visit.actual_date,
++        created_at=visit.created_at,
++        updated_at=visit.updated_at,
++        created_by=visit.created_by,
++        cost_data=visit.cost_data,
++        doctor_name=doctor.name if doctor else None,
++    )
+diff --git a/app/api/routes/api/visit_activities.py b/app/api/routes/api/visit_activities.py
+new file mode 100644
+index 0000000..c19c808
+--- /dev/null
++++ b/app/api/routes/api/visit_activities.py
+@@ -0,0 +1,50 @@
++"""
++Visit activity routes — GET /, PATCH /{activity_id}
++"""
++
++from typing import List
++from uuid import UUID
++
++from fastapi import APIRouter, Depends, HTTPException
++from sqlalchemy import select
++from sqlalchemy.ext.asyncio import AsyncSession
++
++from app.contracts.visit_activity import VisitActivityResponse, VisitActivityUpdate
++from app.dependencies.auth import get_current_member
++from app.dependencies.db import get_db
++from app.models.members import Member
++from app.models.visit_activities import VisitActivity
++
++router = APIRouter()
++
++
++@router.get("/{visit_id}/activities", response_model=List[VisitActivityResponse])
++async def list_visit_activities(
++    visit_id: UUID,
++    member: Member = Depends(get_current_member),
++    db: AsyncSession = Depends(get_db),
++):
++    stmt = select(VisitActivity).where(VisitActivity.visit_id == visit_id)
++    result = await db.execute(stmt)
++    return result.scalars().all()
++
++
++@router.patch("/activities/{activity_id}", response_model=VisitActivityResponse)
++async def update_visit_activity(
++    activity_id: UUID,
++    payload: VisitActivityUpdate,
++    member: Member = Depends(get_current_member),
++    db: AsyncSession = Depends(get_db),
++):
++    stmt = select(VisitActivity).where(VisitActivity.id == activity_id)
++    result = await db.execute(stmt)
++    activity = result.scalars().first()
++
++    if not activity:
++        raise HTTPException(status_code=404, detail="Visit activity not found")
++
++    activity.status = payload.status
++    db.add(activity)
++    await db.commit()
++    await db.refresh(activity)
++    return activity
+diff --git a/app/contracts/patient_visit.py b/app/contracts/patient_visit.py
+index 3f8ac1b..47ee0d1 100644
+--- a/app/contracts/patient_visit.py
++++ b/app/contracts/patient_visit.py
+@@ -22,6 +22,7 @@ class PatientVisitBase(BaseContract):
+     notes: Optional[str] = None
+     next_visit_date: Optional[date] = None
+     location: Optional[str] = None
++    actual_date: Optional[date] = None
+     cost_data: Optional[Dict[str, Any]] = None
+ 
+ 
+diff --git a/app/contracts/visit_activity.py b/app/contracts/visit_activity.py
+new file mode 100644
+index 0000000..236f2a5
+--- /dev/null
++++ b/app/contracts/visit_activity.py
+@@ -0,0 +1,22 @@
++"""
++Contracts for visit activities.
++"""
++
++from datetime import datetime
++from uuid import UUID
++from typing import Optional
++from .base import BaseContract, TimestampedContract
++
++
++class VisitActivityBase(BaseContract):
++    visit_id: UUID
++    activity_name: str
++    status: str = "pending"  # "pending", "completed", "not_applicable"
++
++
++class VisitActivityUpdate(BaseContract):
++    status: str
++
++
++class VisitActivityResponse(VisitActivityBase, TimestampedContract):
++    id: UUID
+diff --git a/app/main.py b/app/main.py
+index a42d337..5a823f0 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -35,6 +35,8 @@ from app.api.routes.api.qa_repository import router as qa_repository_router
+ from app.api.routes.api.threads import router as chat_threads_router
+ from app.api.routes.api.tasks import router as tasks_router
+ from app.api.routes.api.activities import router as trial_activities_router
++from app.api.routes.api.complete_visit import router as complete_visit_router
++from app.api.routes.api.visit_activities import router as visit_activities_router
+ 
+ from contextlib import asynccontextmanager
+ from redis.asyncio import Redis
+@@ -121,6 +123,18 @@ def root():
+     return {"status": "ok"}
+ 
+ 
++@app.get("/debug-config")
++def debug_config():
++    from app.config import get_settings
++    settings = get_settings()
++    return {
++        "upload_api_key_len": len(settings.upload_api_key),
++        "upload_api_key_prefix": settings.upload_api_key[:3] if settings.upload_api_key else "EMPTY",
++        "rag_address": settings.rag_service_address,
++        "use_grpc": settings.use_grpc_rag
++    }
++
++
+ app.include_router(auth_router, prefix="/auth", tags=["auth"])
+ 
+ app.include_router(
+@@ -162,8 +176,12 @@ app.include_router(patients_router, prefix="/api/patients", tags=["patients"])
+ app.include_router(
+     trial_patients_router, prefix="/api/trial-patients", tags=["trial-patients"]
+ )
++app.include_router(patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"])
++app.include_router(
++    complete_visit_router, prefix="/api/patient-visits", tags=["patient-visits"]
++)
+ app.include_router(
+-    patient_visits_router, prefix="/api/patient-visits", tags=["patient-visits"]
++    visit_activities_router, prefix="/api/patient-visits", tags=["patient-visits"]
+ )
+ app.include_router(tasks_router, prefix="/api/tasks", tags=["tasks"])
+ app.include_router(
+diff --git a/app/models/__init__.py b/app/models/__init__.py
+index 07f2221..4d33566 100644
+--- a/app/models/__init__.py
++++ b/app/models/__init__.py
+@@ -45,3 +45,4 @@ from .qa_repository import QARepositoryItem
+ 
+ # Tier 6
+ from .visit_documents import VisitDocument
++from .visit_activities import VisitActivity
+diff --git a/app/models/patient_visits.py b/app/models/patient_visits.py
+index 2927802..908d111 100644
+--- a/app/models/patient_visits.py
++++ b/app/models/patient_visits.py
+@@ -79,6 +79,7 @@ class PatientVisit(Base):
+     notes: Mapped[Optional[str]] = Column(Text, nullable=True)
+     next_visit_date: Mapped[Optional[date]] = Column(Date, nullable=True)
+     location: Mapped[Optional[str]] = Column(Text, nullable=True)
++    actual_date: Mapped[Optional[date]] = Column(Date, nullable=True)
+     created_at: Mapped[Optional[datetime]] = Column(
+         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+     )

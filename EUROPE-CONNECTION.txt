@@ -1,0 +1,16 @@
+﻿# Updated Connection Details (European VM)
+# Generated: 02/13/2026 17:40:19
+
+SUPABASE_DB_URL=postgresql+asyncpg://postgres:postgres@10.132.0.2:5432/postgres
+REDIS_URL=redis://10.132.0.2:6379
+
+# VM Details
+VM_NAME=themison-db-vm-eu
+VM_ZONE=europe-west1-b
+VM_INTERNAL_IP=10.132.0.2
+
+# SSH Access
+# gcloud compute ssh themison-db-vm-eu --project=braided-visitor-484216-i0 --zone=europe-west1-b
+
+# Console Link
+# https://console.cloud.google.com/compute/instancesDetail/zones/europe-west1-b/instances/themison-db-vm-eu?project=braided-visitor-484216-i0

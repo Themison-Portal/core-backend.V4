@@ -1,0 +1,82 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: core-backend-trials
+  labels:
+    cloud.googleapis.com/location: europe-west1
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '12'
+        autoscaling.knative.dev/maxScale: '12'
+        run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/vpc-access-connector: themison-connector
+        run.googleapis.com/vpc-access-egress: all-traffic
+    spec:
+      containerConcurrency: 80
+      containerConcurrency: 80
+      timeoutSeconds: 600
+      containers:
+      - image: us-central1-docker.pkg.dev/braided-visitor-484216-i0/themison-repo/core-backend:fixed-v4
+        command:
+        - python
+        args:
+        - -m
+        - uvicorn
+        - app.main:app
+        - --host
+        - 0.0.0.0
+        - --port
+        - "8080"
+        ports:
+        - containerPort: 8080
+          name: http1
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        startupProbe:
+          failureThreshold: 60
+          periodSeconds: 10
+          tcpSocket:
+            port: 8080
+          timeoutSeconds: 10
+          initialDelaySeconds: 10
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: ENVIRONMENT
+          value: production
+        - name: SUPABASE_DB_URL
+          value: postgresql+asyncpg://postgres:postgres@10.132.0.2:5432/postgres
+        - name: SUPABASE_DB_PASSWORD
+          value: postgres
+        - name: REDIS_URL
+          value: redis://10.132.0.2:6379
+        - name: SUPABASE_URL
+          value: https://nidpneaqxghqueniodus.supabase.co
+        - name: SUPABASE_SERVICE_KEY
+          value: "SECRET_MUST_BE_SET"
+        - name: SUPABASE_ANON_KEY
+          value: "SECRET_MUST_BE_SET"
+        - name: FRONTEND_URL
+          value: "*"
+        - name: OPENAI_API_KEY
+          value: "SECRET_MUST_BE_SET"
+        - name: ANTHROPIC_API_KEY
+          value: "SECRET_MUST_BE_SET"
+
+        # LOWERCASE (Brute Force Pydantic)
+        - name: supabase_db_url
+          value: postgresql+asyncpg://postgres:postgres@10.132.0.2:5432/postgres
+        - name: supabase_url
+          value: https://nidpneaqxghqueniodus.supabase.co
+        - name: supabase_service_key
+          value: "SECRET_MUST_BE_SET"
+        - name: openai_api_key
+          value: "SECRET_MUST_BE_SET"
+        - name: anthropic_api_key
+          value: "SECRET_MUST_BE_SET"

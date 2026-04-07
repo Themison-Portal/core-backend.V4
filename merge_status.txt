@@ -1,0 +1,107 @@
+﻿On branch fix/cloud-run-deployment-stability
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Changes to be committed:
+	new file:   .claude/settings.local.json
+	new file:   .dockerignore
+	modified:   .gitignore
+	new file:   PRODUCTION_SETUP.md
+	modified:   app/api/routes/api/patient_documents.py
+	modified:   app/api/routes/api/trial_documents.py
+	new file:   app/api/routes/local_files.py
+	modified:   app/api/routes/storage/storage.py
+	modified:   app/api/routes/upload.py
+	new file:   app/clients/generated/__init__.py
+	new file:   app/clients/generated/rag/__init__.py
+	new file:   app/clients/generated/rag/v1/__init__.py
+	new file:   app/clients/generated/rag/v1/rag_service_pb2.py
+	new file:   app/clients/generated/rag/v1/rag_service_pb2_grpc.py
+	modified:   app/clients/rag_client.py
+	modified:   app/contracts/document.py
+	modified:   app/dependencies/jobs.py
+	modified:   app/dependencies/storage.py
+	modified:   app/main.py
+	modified:   app/models/documents.py
+	new file:   app/services/jobs/__init__.py
+	new file:   app/services/jobs/job_status_service.py
+	new file:   app/services/storage/base.py
+	modified:   app/services/storage/gcs_service.py
+	new file:   app/services/storage/local_service.py
+	modified:   docker-compose.yml
+	new file:   docker/.env.docker
+	new file:   docker/seed.sql
+	new file:   tests/test_document_fk_constraint.py
+	modified:   tests/test_grpc_routes.py
+	new file:   tests/test_job_status_service.py
+	modified:   tests/test_upload_api.py
+	new file:   tests/test_upload_endpoint.py
+	modified:   tests/test_upload_errors.py
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+	both added:      Dockerfile
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.env.deploy
+	.env.production
+	DATABASE_HANDOFF.md
+	DB-DEPLOY-README.md
+	DEPLOYMENT_ACCESS.md
+	DEPLOY_NOW.md
+	Deployment_Fixes_Package.zip
+	EU-SETUP-FIX.md
+	EUROPE-CONNECTION.txt
+	EUROPE-MIGRATION-GUIDE.md
+	EUROPE_DEPLOYMENT_PROOF.md
+	MIGRATION-COMPLETE.md
+	MIGRATION-FINAL-STATUS.md
+	anthropic_key.txt
+	backup.dump
+	branches.txt
+	cleanup-old-images.ps1
+	cloud-build-deploy-europe.ps1
+	create-secrets-eu.ps1
+	db_backup_script.sh
+	deploy-gcp.ps1
+	deploy-gcp.sh
+	deployment_fixes_temp/
+	diff-endpoints.txt
+	diff-refactor.txt
+	docker-compose.prod.yml
+	endpoints_diff_names.txt
+	export-db.sh
+	fix-europe-deployment.ps1
+	fix-image-push.ps1
+	git_diff.txt
+	git_diff_working.txt
+	git_log.txt
+	git_status.txt
+	hello.yaml
+	images_list.json
+	import-db.sh
+	local_diff.txt
+	main_diff.txt
+	manual-setup-eu.sh
+	merge_status.txt
+	migrate-to-europe.ps1
+	migration details.md
+	move-repo-europe.ps1
+	openai_key.txt
+	openapi.json
+	pre-init.sql
+	recent_commits.txt
+	requirements_minimal.txt
+	service-europe.yaml
+	service-status.json
+	service.yaml
+	service_config.json
+	service_utf8.yaml
+	setup-db-vm.ps1
+	setup-europe.sh
+	status.txt
+	vm_access_key
+	vm_access_key.pub
+

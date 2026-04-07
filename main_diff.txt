@@ -1,0 +1,30 @@
+﻿diff --git a/app/main.py b/app/main.py
+index a7fa0d7..e3fc03e 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -51,20 +51,18 @@ async def lifespan(app: FastAPI):
+     redis_client = None
+ 
+     try:
+-        logging.info("Initializing Redis...")
++        logging.info("Initializing RedisΓÇª")
+ 
+         # --- 1) Connect to Redis ---
+         try:
+-            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+-            redis_client = Redis.from_url(redis_url, decode_responses=False, socket_connect_timeout=5, socket_timeout=5)
++            redis_url = os.getenv("REDIS_URL")
++            redis_client = Redis.from_url(redis_url, decode_responses=False)
+             await redis_client.ping()
+             app.state.redis_client = redis_client
+             logging.info("Redis connection successful.")
+         except Exception as e:
+-            # Non-fatal: log warning but allow the app to start.
+-            # Requests that need Redis will fail gracefully.
+-            logging.warning(f"Redis connection failed at startup (non-fatal): {e}")
+-            app.state.redis_client = None
++            logging.error(f"Redis connection failed: {e}")
++            raise RuntimeError("Failed to connect to Redis") from e            
+         
+         yield
+ 

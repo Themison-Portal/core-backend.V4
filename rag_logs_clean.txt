@@ -1,0 +1,4 @@
+Default STARTUP TCP probe failed 1 time consecutively for container "rag-service-1" on port 8080. The instance was not started.
+Connection failed with status DEADLINE_EXCEEDED.
+2026-03-12 16:36:37,864 - __main__ - INFO - RAG Service is ready to serve requests
+2026-03-12 16:36:37,863 - __main__ - INFO - Starting RAG Service on [::]:50051
