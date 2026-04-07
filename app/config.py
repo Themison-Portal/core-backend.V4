@@ -59,6 +59,7 @@ class Settings(BaseSettings):
 
     # gRPC RAG Service configuration
     rag_service_address: str = "localhost:50051"  # Address of RAG gRPC service
+    rag_service_timeout: float = 600.0  # gRPC timeout in seconds for RAG service calls
     use_grpc_rag: bool = False  # Feature flag for gradual rollout
 
     class Config:
