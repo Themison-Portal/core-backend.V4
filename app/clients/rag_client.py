@@ -55,15 +55,28 @@ class RagClient:
     async def _ensure_connected(self):
         """Ensure gRPC channel is connected."""
         if self._channel is None:
-            self._channel = aio.insecure_channel(
-                self.address,
-                options=[
-                    ("grpc.max_send_message_length", 100 * 1024 * 1024),
-                    ("grpc.max_receive_message_length", 100 * 1024 * 1024),
-                ],
-            )
+            # Use secure channel for port 443 (production/cloud)
+            if self.address.endswith(":443"):
+                self._channel = aio.secure_channel(
+                    self.address,
+                    grpc.ssl_channel_credentials(),
+                    options=[
+                        ("grpc.max_send_message_length", 100 * 1024 * 1024),
+                        ("grpc.max_receive_message_length", 100 * 1024 * 1024),
+                    ],
+                )
+                logger.info(f"Connected to secure RAG Service at {self.address}")
+            else:
+                self._channel = aio.insecure_channel(
+                    self.address,
+                    options=[
+                        ("grpc.max_send_message_length", 100 * 1024 * 1024),
+                        ("grpc.max_receive_message_length", 100 * 1024 * 1024),
+                    ],
+                )
+                logger.info(f"Connected to insecure RAG Service at {self.address}")
             self._stub = RagServiceStub(self._channel)
-            logger.info(f"Connected to RAG Service at {self.address}")
+
 
     async def close(self):
         """Close the gRPC channel."""
