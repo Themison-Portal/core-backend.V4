@@ -46,9 +46,10 @@ class RagClient:
     Async gRPC client for the RAG Service.
     """
 
-    def __init__(self, address: str = None):
+    def __init__(self, address: str = None, timeout: float = None):
         settings = get_settings()
         self.address = address or settings.rag_service_address
+        self.timeout = timeout or settings.rag_service_timeout
         self._channel: Optional[aio.Channel] = None
         self._stub: Optional[RagServiceStub] = None
 
@@ -107,7 +108,7 @@ class RagClient:
         )
 
         try:
-            async for progress in self._stub.IngestPdf(request):
+            async for progress in self._stub.IngestPdf(request, timeout=self.timeout):
                 yield {
                     "stage": progress.stage,
                     "progress_percent": progress.progress_percent,
@@ -156,7 +157,7 @@ class RagClient:
         )
 
         try:
-            response: QueryResponse = await self._stub.Query(request)
+            response: QueryResponse = await self._stub.Query(request, timeout=self.timeout)
             return self._parse_query_response(response)
         except grpc.RpcError as e:
             logger.error(f"Query RPC error: {e}")
@@ -227,7 +228,7 @@ class RagClient:
         )
 
         try:
-            response: HighlightedPdfResponse = await self._stub.GetHighlightedPdf(request)
+            response: HighlightedPdfResponse = await self._stub.GetHighlightedPdf(request, timeout=self.timeout)
             return response.pdf_content
         except grpc.RpcError as e:
             logger.error(f"GetHighlightedPdf RPC error: {e}")
@@ -245,7 +246,7 @@ class RagClient:
         request = InvalidateDocumentRequest(document_id=str(document_id))
 
         try:
-            response: InvalidateDocumentResponse = await self._stub.InvalidateDocument(request)
+            response: InvalidateDocumentResponse = await self._stub.InvalidateDocument(request, timeout=self.timeout)
             return {
                 "success": response.success,
                 "chunks_deleted": response.chunks_deleted,
@@ -267,7 +268,7 @@ class RagClient:
         request = HealthCheckRequest()
 
         try:
-            response: HealthCheckResponse = await self._stub.HealthCheck(request)
+            response: HealthCheckResponse = await self._stub.HealthCheck(request, timeout=self.timeout)
             return {
                 "status": response.status,
                 "version": response.version,
