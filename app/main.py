@@ -64,13 +64,17 @@ async def lifespan(app: FastAPI):
         # --- 1) Connect to Redis ---
         try:
             redis_url = os.getenv("REDIS_URL")
-            redis_client = Redis.from_url(redis_url, decode_responses=False)
-            await redis_client.ping()
-            app.state.redis_client = redis_client
-            logging.info("Redis connection successful.")
+            if redis_url:
+                redis_client = Redis.from_url(redis_url, decode_responses=False)
+                await redis_client.ping()
+                app.state.redis_client = redis_client
+                logging.info("Redis connection successful.")
+            else:
+                logging.warning("REDIS_URL not set, skipping Redis initialization.")
+                app.state.redis_client = None
         except Exception as e:
-            logging.error(f"Redis connection failed: {e}")
-            raise RuntimeError("Failed to connect to Redis") from e
+            logging.error(f"Redis connection failed: {e}. Continuing without Redis.")
+            app.state.redis_client = None
 
         yield
 
@@ -124,6 +128,15 @@ logging.info(f"calling root endpoint with allowed origins")
 @app.get("/")
 def root():
     return {"status": "ok"}
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "service": "core-backend-eu",
+        "version": "1.0.0",
+    }
 
 
 @app.get("/debug-config")
