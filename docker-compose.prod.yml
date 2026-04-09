@@ -7,7 +7,7 @@ services:
     container_name: postgres-db
     restart: always # Production: Always restart on failure/reboot
     ports:
-      - "127.0.0.1:5432:5432" # Production: Bind only to localhost for security
+      - "5432:5432" # Allow access from VPC connector (secured by Cloud Firewall)
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -27,7 +27,7 @@ services:
     container_name: themison-redis
     restart: always
     ports:
-      - "127.0.0.1:6379:6379" # Production: Localhost only
+      - "6379:6379" # Allow access from VPC connector
     volumes:
       - redis_prod_data:/data
     healthcheck:
