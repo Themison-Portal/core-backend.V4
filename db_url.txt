@@ -1,1 +1,0 @@
-postgresql+asyncpg://postgres:postgres@10.132.0.2:5432/postgres
