@@ -100,6 +100,7 @@ allowed_origins = [
     "https://core-frontend-v3.vercel.app",
     "https://core-frontend-v3-improvements.vercel.app",
     "https://core-frontend-preview.vercel.app",
+    "https://themison-frontend-eu-768873408671.europe-west1.run.app",
     "http://localhost:8080",
     "http://localhost:5173",
     "http://localhost:3000",
