@@ -120,10 +120,6 @@ async def get_current_member(
 
     # Find member by profile_id
     result = await db.execute(
-        select(Member).where(Member.id == profile.id) # Try profile.id first if member.id is same
-    )
-    # Wait, check if member table has profile_id FK
-    result = await db.execute(
         select(Member).where(Member.profile_id == profile.id)
     )
     member = result.scalars().first()
@@ -132,24 +128,44 @@ async def get_current_member(
         logger.info("JIT: Creating new membership for %s", email)
         # Ensure a default organization exists
         from app.models.organizations import Organization
+        from app.models.themison_admins import ThemisonAdmin
+
+        # 1. Ensure a system admin exists (needed for Organization.created_by)
+        admin_result = await db.execute(select(ThemisonAdmin).limit(1))
+        admin = admin_result.scalars().first()
+        if not admin:
+            logger.info("JIT: Creating default system admin")
+            admin = ThemisonAdmin(
+                id=uuid.uuid4(),
+                email="admin@themison.com",
+                name="System Admin",
+                active=True
+            )
+            db.add(admin)
+            await db.flush()
+
+        # 2. Ensure an organization exists
         org_result = await db.execute(select(Organization).limit(1))
         org = org_result.scalars().first()
         
         if not org:
+            logger.info("JIT: Creating default organization")
             org = Organization(
                 id=uuid.uuid4(),
                 name="Themison Global",
+                created_by=admin.id,
                 onboarding_completed=True
             )
             db.add(org)
             await db.flush()
 
+        # 3. Create the member
         member = Member(
             id=uuid.uuid4(),
             profile_id=profile.id,
             organization_id=org.id,
             email=email,
-            name=user.get("name", email),
+            name=user.get("name") or profile.first_name + " " + profile.last_name or email,
             default_role="admin", # First user or new users get admin in this dev stage
             is_active=True,
             onboarding_completed=True

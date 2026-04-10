@@ -152,6 +152,9 @@ def debug_config():
         ),
         "rag_address": settings.rag_service_address,
         "use_grpc": settings.use_grpc_rag,
+        "auth0_domain": settings.auth0_domain,
+        "auth0_audience": settings.auth0_audience,
+        "auth0_domain_len": len(settings.auth0_domain),
     }
 
 
