@@ -3,6 +3,7 @@ Authentication dependencies — Auth0 JWT verification.
 """
 
 import logging
+import uuid
 from typing import Any, Dict, Optional
 
 from fastapi import Depends, HTTPException, status
@@ -105,23 +106,58 @@ async def get_current_member(
     )
     profile = result.scalars().first()
 
+    # --- JIT PROVISIONING START ---
     if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No profile found for this account",
+        logger.info("JIT: Creating new profile for %s", email)
+        profile = Profile(
+            id=uuid.uuid4(),
+            email=email,
+            first_name=user.get("name", "").split(" ")[0] if user.get("name") else "New",
+            last_name=user.get("name", "").split(" ")[1] if user.get("name") and len(user.get("name").split(" ")) > 1 else "User"
         )
+        db.add(profile)
+        await db.flush()
 
     # Find member by profile_id
+    result = await db.execute(
+        select(Member).where(Member.id == profile.id) # Try profile.id first if member.id is same
+    )
+    # Wait, check if member table has profile_id FK
     result = await db.execute(
         select(Member).where(Member.profile_id == profile.id)
     )
     member = result.scalars().first()
 
     if not member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No organization membership found for this account",
+        logger.info("JIT: Creating new membership for %s", email)
+        # Ensure a default organization exists
+        from app.models.organizations import Organization
+        org_result = await db.execute(select(Organization).limit(1))
+        org = org_result.scalars().first()
+        
+        if not org:
+            org = Organization(
+                id=uuid.uuid4(),
+                name="Themison Global",
+                onboarding_completed=True
+            )
+            db.add(org)
+            await db.flush()
+
+        member = Member(
+            id=uuid.uuid4(),
+            profile_id=profile.id,
+            organization_id=org.id,
+            email=email,
+            name=user.get("name", email),
+            default_role="admin", # First user or new users get admin in this dev stage
+            is_active=True,
+            onboarding_completed=True
         )
+        db.add(member)
+        await db.commit()
+        await db.refresh(member)
+    # --- JIT PROVISIONING END ---
 
     return member
 
