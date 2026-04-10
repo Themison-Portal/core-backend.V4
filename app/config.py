@@ -3,6 +3,8 @@ Configuration for the application
 """
 from functools import lru_cache
 
+from typing import Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -61,6 +63,14 @@ class Settings(BaseSettings):
     rag_service_address: str = "localhost:50051"  # Address of RAG gRPC service
     rag_service_timeout: float = 600.0  # gRPC timeout in seconds for RAG service calls
     use_grpc_rag: bool = False  # Feature flag for gradual rollout
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def strip_strings(cls, v: Any) -> Any:
+        """Strip whitespace from all string inputs to handle 'dirty' secrets."""
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     class Config:
         """
