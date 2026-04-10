@@ -141,10 +141,35 @@ def health():
 
 
 @app.get("/debug-config")
-def debug_config():
+async def debug_config():
     from app.config import get_settings
-
+    from sqlalchemy import select, func
+    from app.dependencies.db import get_db
+    from app.models.profiles import Profile
+    from app.models.members import Member
+    from app.models.organizations import Organization
+    
     settings = get_settings()
+    
+    p_count = -1
+    m_count = -1
+    o_count = -1
+    
+    try:
+        # Get DB session from generator
+        db_gen = get_db()
+        db = await db_gen.__anext__()
+        try:
+            p_count = (await db.execute(select(func.count()).select_from(Profile))).scalar()
+            m_count = (await db.execute(select(func.count()).select_from(Member))).scalar()
+            o_count = (await db.execute(select(func.count()).select_from(Organization))).scalar()
+        finally:
+            # We don't strictly need to close here as it's a debug endpoint 
+            # and the generator will handle it if we let it, but simple is better
+            pass
+    except Exception as e:
+        logging.error(f"Debug stats failed: {e}")
+
     return {
         "upload_api_key_len": len(settings.upload_api_key),
         "upload_api_key_prefix": (
@@ -155,6 +180,11 @@ def debug_config():
         "auth0_domain": settings.auth0_domain,
         "auth0_audience": settings.auth0_audience,
         "auth0_domain_len": len(settings.auth0_domain),
+        "db_stats": {
+            "profiles": p_count,
+            "members": m_count,
+            "organizations": o_count
+        }
     }
 
 
