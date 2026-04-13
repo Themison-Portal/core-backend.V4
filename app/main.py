@@ -101,14 +101,13 @@ allowed_origins = [
     "https://core-frontend-v3-improvements.vercel.app",
     "https://core-frontend-preview.vercel.app",
     "https://themison-frontend-eu-768873408671.europe-west1.run.app",
-    "https://themison-frontend-eu-768873408671.europe-west1.run.app/",
     "http://localhost:8080",
     "http://localhost:5173",
     "http://localhost:3000",
 ]
 
 # Allow all origins on our production domain suffix
-allowed_origin_regex = r"https://.*\.run\.app"
+allowed_origin_regex = r"https://.*\.run\.app$"
 
 # Add FRONTEND_URL from environment if set
 frontend_url = os.getenv("FRONTEND_URL")
