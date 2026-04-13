@@ -172,7 +172,7 @@ async def batch_create_invitations(
             email=item.email,
             name=item.name,
             organization_id=org_id,
-            initial_role=item.initial_role,
+            initial_role=item.org_role,
             invited_by=member.id,
         )
         db.add(inv)
