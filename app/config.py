@@ -13,9 +13,9 @@ class Settings(BaseSettings):
     Application settings
     """
 
-    openai_api_key: str
-    anthropic_api_key: str  # Required for Claude Opus 4.5
-    database_url: str  # PostgreSQL connection (asyncpg format)
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""  # Required for Claude Opus 4.5
+    database_url: str = ""  # PostgreSQL connection (asyncpg format)
     redis_url: str = ""
     frontend_url: str = "http://localhost:3000"  # Optional with default
     upload_api_key: str = ""  # API key for upload endpoint (X-API-KEY header)

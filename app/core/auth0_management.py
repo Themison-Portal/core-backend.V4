@@ -10,11 +10,18 @@ logger = logging.getLogger(__name__)
 
 class Auth0ManagementClient:
     def __init__(self):
-        self.settings = get_settings()
-        self.domain = self.settings.auth0_domain
-        self.client_id = self.settings.auth0_client_id
-        self.client_secret = self.settings.auth0_client_secret
-        self.audience = f"https://{self.domain}/api/v2/"
+        try:
+            self.settings = get_settings()
+            self.domain = self.settings.auth0_domain
+            self.client_id = self.settings.auth0_client_id
+            self.client_secret = self.settings.auth0_client_secret
+            self.audience = f"https://{self.domain}/api/v2/" if self.domain else ""
+        except Exception as e:
+            logger.warning(f"Auth0 Management Client partially initialized: {e}")
+            self.domain = ""
+            self.client_id = ""
+            self.client_secret = ""
+            self.audience = ""
         self._token: Optional[str] = None
 
     async def _get_access_token(self) -> str:
