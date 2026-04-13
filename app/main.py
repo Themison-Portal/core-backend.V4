@@ -79,9 +79,17 @@ async def lifespan(app: FastAPI):
             from sqlalchemy import text
             from app.db.session import engine
             async with engine.begin() as conn:
+                # Members/Profiles stability
                 await conn.execute(text("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
                 await conn.execute(text("ALTER TABLE members ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
-            logging.info("Self-healing: Applied missing database columns (is_active).")
+                
+                # Invitations stability
+                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS token TEXT;"))
+                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';"))
+                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS invited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"))
+                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;"))
+                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP WITH TIME ZONE;"))
+            logging.info("Self-healing: Applied missing database columns (is_active, invitation_meta).")
         except Exception as e:
             logging.error(f"Self-healing migrations failed: {e}")
 
