@@ -78,26 +78,67 @@ async def lifespan(app: FastAPI):
         try:
             from sqlalchemy import text
             from app.db.session import engine
-            async with engine.begin() as conn:
-                # Members/Profiles stability
-                await conn.execute(text("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
-                await conn.execute(text("ALTER TABLE members ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+            
+            async with engine.connect() as conn:
+                # Helper to check if column exists
+                async def column_exists(table, column):
+                    res = await conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        f"WHERE table_name = '{table}' AND column_name = '{column}'"
+                    ))
+                    return res.scalar() is not None
+
+                # Profiles
+                if not await column_exists('profiles', 'is_active'):
+                    await conn.execute(text("ALTER TABLE profiles ADD COLUMN is_active BOOLEAN DEFAULT TRUE;"))
+                    logging.info("Added profiles.is_active")
+
+                # Members
+                if not await column_exists('members', 'is_active'):
+                    await conn.execute(text("ALTER TABLE members ADD COLUMN is_active BOOLEAN DEFAULT TRUE;"))
+                    logging.info("Added members.is_active")
+
+                # Invitations
+                if not await column_exists('invitations', 'token'):
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN token TEXT;"))
+                    # Populate NULL tokens with unique values
+                    await conn.execute(text("UPDATE invitations SET token = MD5(random()::text) WHERE token IS NULL;"))
+                    await conn.execute(text("ALTER TABLE invitations ALTER COLUMN token SET NOT NULL;"))
+                    logging.info("Added and populated invitations.token")
                 
-                # Invitations stability
-                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS token TEXT;"))
-                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';"))
-                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS invited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"))
-                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;"))
-                await conn.execute(text("ALTER TABLE invitations ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP WITH TIME ZONE;"))
+                if not await column_exists('invitations', 'status'):
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN status TEXT DEFAULT 'pending';"))
+                    logging.info("Added invitations.status")
                 
-                # Trials stability (newly identified crash)
-                await conn.execute(text("ALTER TABLE trials ADD COLUMN IF NOT EXISTS visit_schedule_template JSONB DEFAULT '{}';"))
-                await conn.execute(text("ALTER TABLE trials ADD COLUMN IF NOT EXISTS budget_data JSONB DEFAULT '{}';"))
+                if not await column_exists('invitations', 'invited_at'):
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN invited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"))
+                    logging.info("Added invitations.invited_at")
+
+                if not await column_exists('invitations', 'expires_at'):
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE;"))
+                    logging.info("Added invitations.expires_at")
+
+                if not await column_exists('invitations', 'accepted_at'):
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN accepted_at TIMESTAMP WITH TIME ZONE;"))
+                    logging.info("Added invitations.accepted_at")
+
+                # Trials (New stability columns)
+                if not await column_exists('trials', 'visit_schedule_template'):
+                    await conn.execute(text("ALTER TABLE trials ADD COLUMN visit_schedule_template JSONB DEFAULT '{}';"))
+                    logging.info("Added trials.visit_schedule_template")
+
+                if not await column_exists('trials', 'budget_data'):
+                    await conn.execute(text("ALTER TABLE trials ADD COLUMN budget_data JSONB DEFAULT '{}';"))
+                    logging.info("Added trials.budget_data")
+
+                # Patient Visits
+                if not await column_exists('patient_visits', 'cost_data'):
+                    await conn.execute(text("ALTER TABLE patient_visits ADD COLUMN cost_data JSONB DEFAULT '{}';"))
+                    logging.info("Added patient_visits.cost_data")
                 
-                # Patient Visits stability
-                await conn.execute(text("ALTER TABLE patient_visits ADD COLUMN IF NOT EXISTS cost_data JSONB DEFAULT '{}';"))
+                await conn.commit()
                 
-            logging.info("Self-healing: Applied missing database columns (is_active, invitation_meta, trial_meta, visit_meta).")
+            logging.info("Self-healing: Migration check completed.")
         except Exception as e:
             logging.error(f"Self-healing migrations failed: {e}")
 
