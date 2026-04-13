@@ -108,6 +108,9 @@ allowed_origins = [
     "http://localhost:3000",
 ]
 
+# Allow all origins on our production domain suffix
+allowed_origin_regex = r"https://.*\.run\.app"
+
 # Add FRONTEND_URL from environment if set
 frontend_url = os.getenv("FRONTEND_URL")
 if frontend_url and frontend_url not in allowed_origins:
@@ -116,8 +119,9 @@ if frontend_url and frontend_url not in allowed_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True if allowed_origins != ["*"] else False,
-    allow_methods=["*"],  # Allow all methods including OPTIONS for preflight
+    allow_origin_regex=allowed_origin_regex,
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
@@ -130,7 +134,7 @@ logging.info(f"calling root endpoint with allowed origins")
 
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return {"status": "ok", "version": "4.0.2-CORS-FORCE", "message": "Themison Backend API"}
 
 
 @app.get("/health")
