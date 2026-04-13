@@ -73,8 +73,8 @@ async def lifespan(app: FastAPI):
                 app.state.redis_client = None
         except Exception as e:
             logging.error(f"Redis connection failed: {e}")
-            if os.getenv("ENVIRONMENT") == "production":
-                raise RuntimeError("Failed to connect to Redis in production") from e
+            # Do NOT crash the app in production if Redis is down. 
+            # Better to be slow than dead.
             app.state.redis_client = None
 
         yield
