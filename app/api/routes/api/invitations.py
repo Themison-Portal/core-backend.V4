@@ -22,6 +22,9 @@ from app.models.members import Member
 from app.models.organizations import Organization
 from app.services.email_service import email_service
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -147,6 +150,7 @@ async def batch_create_invitations(
     created = []
 
     for item in payload.invitations:
+        logger.info(f"[TRACE] Processing invitation for: {item.email} (Role: {item.org_role})")
         # Check email uniqueness within org
         existing = (
             (
@@ -163,6 +167,7 @@ async def batch_create_invitations(
         )
 
         if existing:
+            logger.warning(f"[TRACE] Pending invitation already exists for {item.email}")
             raise HTTPException(
                 status_code=409,
                 detail=f"Pending invitation already exists for {item.email}",
@@ -177,23 +182,33 @@ async def batch_create_invitations(
         )
         db.add(inv)
         created.append(inv)
+        logger.info(f"[TRACE] Invitation object staged in session for {item.email}")
 
     # Fetch organization name for the email
     org_result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = org_result.scalars().first()
     org_name = org.name if org else "Themison"
+    logger.info(f"[TRACE] Organization found: {org_name}. Committing database session...")
 
-    await db.commit()
+    try:
+        await db.commit()
+        logger.info(f"[TRACE] Database commit SUCCESSFUL for {len(created)} invitations.")
+    except Exception as e:
+        logger.error(f"[TRACE] Database commit FAILED: {e}")
+        await db.rollback()
+        raise
     
     # Refresh and send emails
     for inv in created:
         await db.refresh(inv)
+        logger.info(f"[TRACE] Dispatching email for {inv.email} with token: {inv.token[:8]}...")
         # Trigger email (asynchronous logs for now)
-        await email_service.send_invitation_email(
+        sent = await email_service.send_invitation_email(
             email=inv.email,
             name=inv.name,
             token=inv.token,
             org_name=org_name
         )
+        logger.info(f"[TRACE] Email service result for {inv.email}: {sent}")
         
     return created
