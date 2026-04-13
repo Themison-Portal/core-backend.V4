@@ -60,7 +60,7 @@ class EmailService:
         payload = {
             "personalizations": [{"to": [{"email": email}]}],
             "from": {
-                "email": "noreply@themison.app",
+                "email": self.settings.email_from or "noreply@themison.app",
                 "name": "Themison Portal"
             },
             "subject": f"Invitation to join {org_name}",
@@ -81,11 +81,15 @@ class EmailService:
                 json=payload,
                 headers=headers
             )
-            resp.raise_for_status()
-            logger.info(f"Successfully sent invitation email to {email}")
+            
+            if resp.status_code >= 400:
+                logger.error(f"SendGrid Error {resp.status_code}: {resp.text}")
+                return False
+                
+            logger.info(f"Successfully sent invitation email to {email} (Status: {resp.status_code})")
             return True
         except Exception as e:
-            logger.error(f"Failed to send email via SendGrid: {e}")
+            logger.error(f"Unexpected error sending email via SendGrid: {e}")
             return False
 
 # Global instance
