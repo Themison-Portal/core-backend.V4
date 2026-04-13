@@ -13,6 +13,10 @@ except Exception as e:
     logging.error("Failed to load settings:", exc_info=e)
     settings = None
 
+# Ensure async_session is defined even if engine creation fails
+async_session = None
+engine = None
+
 """
 Create an async engine for the database.
 """
