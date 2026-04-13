@@ -75,12 +75,18 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
             detail="Invitation has expired",
         )
 
+    # Fetch organization name
+    org_result = await db.execute(select(Organization).where(Organization.id == invitation.organization_id))
+    org = org_result.scalars().first()
+    org_name = org.name if org else "Themison"
+
     # Check if user already exists is handled in signup flow or by frontend
     # Return invitation info for pre-filling signup form
     return {
         "id": str(invitation.id),
         "email": invitation.email,
         "organization_id": str(invitation.organization_id),
+        "organization_name": org_name,
         "initial_role": invitation.initial_role,
         "status": invitation.status,
         "expires_at": (
