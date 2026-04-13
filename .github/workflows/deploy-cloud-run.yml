@@ -54,6 +54,8 @@ jobs:
             --set-env-vars="ALLOW_ALL_ORIGINS=false" \
             --set-env-vars="GCS_PROJECT_ID=${{ env.PROJECT_ID }}" \
             --set-env-vars="FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
+            --set-env-vars="EMAIL_FROM=${{ secrets.EMAIL_FROM }}" \
+            --set-env-vars="SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}" \
             --set-env-vars="GCS_BUCKET_TRIAL_DOCUMENTS=${{ secrets.GCS_BUCKET_TRIAL_DOCUMENTS }}" \
             --set-env-vars="GCS_BUCKET_PATIENT_DOCUMENTS=${{ secrets.GCS_BUCKET_PATIENT_DOCUMENTS }}" \
             --set-env-vars="RAG_SERVICE_ADDRESS=rag-service-eu-768873408671.europe-west1.run.app:443" \
