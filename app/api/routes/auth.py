@@ -2,7 +2,8 @@
 Authentication routes
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import get_current_member
@@ -16,6 +17,7 @@ import uuid
 from datetime import datetime
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/me")
@@ -87,6 +89,12 @@ async def signup_complete(
     
     if invitation.status != "pending":
         raise HTTPException(status_code=400, detail="Invitation already used or expired")
+    
+    # Check expiration
+    if invitation.expires_at and invitation.expires_at < datetime.utcnow():
+        invitation.status = "expired"
+        await db.commit()
+        raise HTTPException(status_code=400, detail="Invitation has expired")
 
     # 2. Create Auth0 User
     try:
@@ -109,11 +117,16 @@ async def signup_complete(
     try:
         # Profile
         profile_id = uuid.uuid4()
+        # Safe name splitting
+        name_parts = invitation.name.split(" ") if invitation.name else ["New", "User"]
+        inv_first = name_parts[0]
+        inv_last = name_parts[1] if len(name_parts) > 1 else "User"
+
         new_profile = Profile(
             id=profile_id,
             email=invitation.email,
-            first_name=payload.first_name or invitation.name.split(" ")[0] if invitation.name else "New",
-            last_name=payload.last_name or (invitation.name.split(" ")[1] if invitation.name and len(invitation.name.split(" ")) > 1 else "User")
+            first_name=payload.first_name or inv_first,
+            last_name=payload.last_name or inv_last
         )
         db.add(new_profile)
         

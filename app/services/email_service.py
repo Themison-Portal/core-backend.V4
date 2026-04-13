@@ -60,8 +60,8 @@ class EmailService:
         payload = {
             "personalizations": [{"to": [{"email": email}]}],
             "from": {
-                "email": self.settings.email_from,
-                "name": self.settings.email_from_name
+                "email": "noreply@themison.app",
+                "name": "Themison Portal"
             },
             "subject": f"Invitation to join {org_name}",
             "content": [
