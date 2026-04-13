@@ -165,7 +165,7 @@ async def get_current_member(
             profile_id=profile.id,
             organization_id=org.id,
             email=email,
-            name=user.get("name") or profile.first_name + " " + profile.last_name or email,
+            name=user.get("name") or f"{profile.first_name or ''} {profile.last_name or ''}".strip() or email,
             default_role="admin", # First user or new users get admin in this dev stage
             is_active=True,
             onboarding_completed=True

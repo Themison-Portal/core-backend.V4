@@ -33,8 +33,7 @@ from app.api.routes.api.chat_sessions import router as chat_sessions_router
 from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
 
-# TODO: Thread-based chat feature is incomplete (missing DB tables).
-# from app.api.routes.api.threads import router as chat_threads_router
+from app.api.routes.api.threads import router as chat_threads_router
 from app.api.routes.api.tasks import router as tasks_router
 from app.api.routes.api.activities import router as trial_activities_router
 from app.api.routes.api.complete_visit import router as complete_visit_router
@@ -73,7 +72,9 @@ async def lifespan(app: FastAPI):
                 logging.warning("REDIS_URL not set, skipping Redis initialization.")
                 app.state.redis_client = None
         except Exception as e:
-            logging.error(f"Redis connection failed: {e}. Continuing without Redis.")
+            logging.error(f"Redis connection failed: {e}")
+            if os.getenv("ENVIRONMENT") == "production":
+                raise RuntimeError("Failed to connect to Redis in production") from e
             app.state.redis_client = None
 
         yield
@@ -101,6 +102,7 @@ allowed_origins = [
     "https://core-frontend-v3-improvements.vercel.app",
     "https://core-frontend-preview.vercel.app",
     "https://themison-frontend-eu-768873408671.europe-west1.run.app",
+    "https://themison-frontend-eu-768873408671.europe-west1.run.app/",
     "http://localhost:8080",
     "http://localhost:5173",
     "http://localhost:3000",
@@ -136,7 +138,7 @@ def health():
     return {
         "status": "healthy",
         "service": "core-backend-eu",
-        "version": "1.0.0",
+        "version": "1.1.0",
     }
 
 
@@ -252,10 +254,9 @@ app.include_router(
 app.include_router(
     chat_messages_router, prefix="/api/chat-messages", tags=["chat-messages"]
 )
-# TODO: Thread-based chat feature is incomplete (missing DB tables).
-# app.include_router(
-#     chat_threads_router, prefix="/api/chat-threads", tags=["chat-threads"]
-# )
+app.include_router(
+    chat_threads_router, prefix="/api/chat-threads", tags=["chat-threads"]
+)
 app.include_router(
     qa_repository_router, prefix="/api/qa-repository", tags=["qa-repository"]
 )

@@ -2167,6 +2167,7 @@ ALTER TABLE "public"."documents" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."invitations" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "token" "text" NOT NULL,
     "email" "text" NOT NULL,
     "name" "text" NOT NULL,
     "organization_id" "uuid" NOT NULL,
@@ -2178,6 +2179,8 @@ CREATE TABLE IF NOT EXISTS "public"."invitations" (
     "accepted_at" timestamp with time zone,
     CONSTRAINT "invitations_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'accepted'::"text", 'expired'::"text", 'cancelled'::"text"])))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_invitations_token" ON "public"."invitations" ("token");
 
 
 ALTER TABLE "public"."invitations" OWNER TO "postgres";
@@ -2193,7 +2196,8 @@ CREATE TABLE IF NOT EXISTS "public"."members" (
     "invited_by" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "onboarding_completed" boolean DEFAULT false NOT NULL
+    "onboarding_completed" boolean DEFAULT false NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL
 );
 
 
@@ -2203,10 +2207,12 @@ ALTER TABLE "public"."members" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."organizations" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
-    "created_by" "uuid" NOT NULL,
+    "created_by" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "onboarding_completed" boolean DEFAULT false
+    "onboarding_completed" boolean DEFAULT false,
+    "support_enabled" boolean DEFAULT true,
+    "is_active" boolean DEFAULT true
 );
 
 
@@ -2254,6 +2260,7 @@ CREATE TABLE IF NOT EXISTS "public"."patient_visits" (
     "notes" "text",
     "next_visit_date" "date",
     "location" "text",
+    "actual_date" "date",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "created_by" "uuid",

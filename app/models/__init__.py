@@ -40,8 +40,8 @@ from .trial_patients import TrialPatient
 from .patient_documents import PatientDocument
 
 # Tier 5
-from .visit_activities import VisitActivity
 from .patient_visits import PatientVisit
+from .visit_activities import VisitActivity
 from .qa_repository import QARepositoryItem
 
 # Tier 6

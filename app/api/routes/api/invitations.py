@@ -19,6 +19,8 @@ from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
 from app.models.invitations import Invitation
 from app.models.members import Member
+from app.models.organizations import Organization
+from app.services.email_service import email_service
 
 router = APIRouter()
 
@@ -170,7 +172,22 @@ async def batch_create_invitations(
         db.add(inv)
         created.append(inv)
 
+    # Fetch organization name for the email
+    org_result = await db.execute(select(Organization).where(Organization.id == org_id))
+    org = org_result.scalars().first()
+    org_name = org.name if org else "Themison"
+
     await db.commit()
+    
+    # Refresh and send emails
     for inv in created:
         await db.refresh(inv)
+        # Trigger email (asynchronous logs for now)
+        await email_service.send_invitation_email(
+            email=inv.email,
+            name=inv.name,
+            token=inv.token,
+            org_name=org_name
+        )
+        
     return created

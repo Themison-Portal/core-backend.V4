@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     rag_service_address: str = "localhost:50051"  # Address of RAG gRPC service
     rag_service_timeout: float = 600.0  # gRPC timeout in seconds for RAG service calls
     use_grpc_rag: bool = False  # Feature flag for gradual rollout
+    
+    # Email Configuration
+    sendgrid_api_key: str = ""
+    email_from: str = "noreply@themison.com"
+    email_from_name: str = "Themison Portal"
 
     @field_validator("*", mode="before")
     @classmethod

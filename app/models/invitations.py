@@ -17,6 +17,7 @@ class Invitation(Base):
     __tablename__ = "invitations"
 
     id: Mapped[UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    token: Mapped[str] = Column(Text, nullable=False, default=lambda: uuid.uuid4().hex)
     email: Mapped[str] = Column(Text, nullable=False)
     name: Mapped[str] = Column(Text, nullable=False)
     organization_id: Mapped[UUID] = Column(

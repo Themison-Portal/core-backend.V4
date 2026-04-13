@@ -18,8 +18,8 @@ class Organization(Base):
 
     id: Mapped[UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = Column(Text, nullable=False)
-    created_by: Mapped[UUID] = Column(
-        UUID(as_uuid=True), ForeignKey("themison_admins.id"), nullable=False
+    created_by: Mapped[Optional[UUID]] = Column(
+        UUID(as_uuid=True), ForeignKey("themison_admins.id"), nullable=True
     )
     created_at: Mapped[Optional[datetime]] = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
@@ -32,3 +32,5 @@ class Organization(Base):
     onboarding_completed: Mapped[Optional[bool]] = Column(Boolean, default=False)
     # NEW flag added to enable/disable support for an organization. This allows us to turn off support for specific organizations without deleting them.
     support_enabled: Mapped[bool] = Column(Boolean, default=True)
+    # Flag to track if the organization is currently active
+    is_active: Mapped[bool] = Column(Boolean, default=True)

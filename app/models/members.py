@@ -38,6 +38,7 @@ class Member(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
     onboarding_completed: Mapped[bool] = Column(Boolean, nullable=False, default=False)
+    is_active: Mapped[bool] = Column(Boolean, nullable=False, default=True)
 
     # Relationships
     profile: Mapped["Profile"] = relationship("Profile", foreign_keys=[profile_id])

@@ -8,6 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
 from app.models.members import Member
+from app.models.profiles import Profile
+from app.models.invitations import Invitation
+from app.contracts.auth import SignupCompleteRequest, SignupCompleteResponse
+from app.core.auth0_management import auth0_mgmt
+import uuid
+from datetime import datetime
 
 router = APIRouter()
 
@@ -57,3 +63,85 @@ async def get_me(
             "onboarding_completed": organization.onboarding_completed if organization else None,
         } if organization else None,
     }
+
+@router.post("/signup/complete", response_model=SignupCompleteResponse)
+async def signup_complete(
+    payload: SignupCompleteRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Finalize signup for an invited user.
+    1. Validate token
+    2. Create Auth0 user
+    3. Create Profile and Member in DB
+    4. Mark invitation as accepted
+    """
+    from sqlalchemy import select
+
+    # 1. Validate Invitation
+    result = await db.execute(select(Invitation).where(Invitation.token == payload.token))
+    invitation = result.scalars().first()
+    
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invalid invitation token")
+    
+    if invitation.status != "pending":
+        raise HTTPException(status_code=400, detail="Invitation already used or expired")
+
+    # 2. Create Auth0 User
+    try:
+        # If names provided in payload, use them, otherwise use invitation name
+        display_name = invitation.name
+        if payload.first_name and payload.last_name:
+            display_name = f"{payload.first_name} {payload.last_name}"
+
+        auth0_user = await auth0_mgmt.create_user(
+            email=invitation.email,
+            password=payload.password,
+            name=display_name
+        )
+        auth0_sub = auth0_user["user_id"]
+    except Exception as e:
+        logger.error(f"Failed to create Auth0 user: {e}")
+        raise HTTPException(status_code=500, detail=f"Authentication provider error: {str(e)}")
+
+    # 3. Create DB Records
+    try:
+        # Profile
+        profile_id = uuid.uuid4()
+        new_profile = Profile(
+            id=profile_id,
+            email=invitation.email,
+            first_name=payload.first_name or invitation.name.split(" ")[0] if invitation.name else "New",
+            last_name=payload.last_name or (invitation.name.split(" ")[1] if invitation.name and len(invitation.name.split(" ")) > 1 else "User")
+        )
+        db.add(new_profile)
+        
+        # Member
+        new_member = Member(
+            id=uuid.uuid4(),
+            name=display_name,
+            email=invitation.email,
+            organization_id=invitation.organization_id,
+            profile_id=profile_id,
+            default_role=invitation.initial_role,
+            is_active=True,
+            onboarding_completed=False
+        )
+        db.add(new_member)
+        
+        # 4. Update Invitation
+        invitation.status = "accepted"
+        invitation.accepted_at = datetime.utcnow()
+        
+        await db.commit()
+        
+        return SignupCompleteResponse(
+            success=True,
+            message="Signup completed successfully",
+            user_id=str(profile_id)
+        )
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Signup DB commit failed: {e}")
+        raise HTTPException(status_code=500, detail="Database error during signup completion")

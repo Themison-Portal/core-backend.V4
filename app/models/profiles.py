@@ -27,3 +27,4 @@ class Profile(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    is_active: Mapped[bool] = Column(Boolean, nullable=False, default=True)
