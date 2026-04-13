@@ -33,7 +33,6 @@ from app.api.routes.api.chat_sessions import router as chat_sessions_router
 from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
 
-from app.api.routes.api.threads import router as chat_threads_router
 from app.api.routes.api.tasks import router as tasks_router
 from app.api.routes.api.activities import router as trial_activities_router
 from app.api.routes.api.complete_visit import router as complete_visit_router
@@ -257,9 +256,6 @@ app.include_router(
 )
 app.include_router(
     chat_messages_router, prefix="/api/chat-messages", tags=["chat-messages"]
-)
-app.include_router(
-    chat_threads_router, prefix="/api/chat-threads", tags=["chat-threads"]
 )
 app.include_router(
     qa_repository_router, prefix="/api/qa-repository", tags=["qa-repository"]
