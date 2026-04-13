@@ -7,7 +7,13 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def __init__(self):
         self._settings = None
-        self._client = httpx.AsyncClient()
+        self._client = None
+
+    @property
+    def client(self) -> httpx.AsyncClient:
+        if self._client is None:
+            self._client = httpx.AsyncClient()
+        return self._client
 
     @property
     def settings(self):
@@ -70,7 +76,7 @@ class EmailService:
         }
 
         try:
-            resp = await self._client.post(
+            resp = await self.client.post(
                 "https://api.sendgrid.com/v3/mail/send",
                 json=payload,
                 headers=headers
