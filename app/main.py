@@ -93,7 +93,11 @@ async def lifespan(app: FastAPI):
                 # Trials stability (newly identified crash)
                 await conn.execute(text("ALTER TABLE trials ADD COLUMN IF NOT EXISTS visit_schedule_template JSONB DEFAULT '{}';"))
                 await conn.execute(text("ALTER TABLE trials ADD COLUMN IF NOT EXISTS budget_data JSONB DEFAULT '{}';"))
-            logging.info("Self-healing: Applied missing database columns (is_active, invitation_meta, trial_meta).")
+                
+                # Patient Visits stability
+                await conn.execute(text("ALTER TABLE patient_visits ADD COLUMN IF NOT EXISTS cost_data JSONB DEFAULT '{}';"))
+                
+            logging.info("Self-healing: Applied missing database columns (is_active, invitation_meta, trial_meta, visit_meta).")
         except Exception as e:
             logging.error(f"Self-healing migrations failed: {e}")
 
