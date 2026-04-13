@@ -72,9 +72,18 @@ async def lifespan(app: FastAPI):
                 app.state.redis_client = None
         except Exception as e:
             logging.error(f"Redis connection failed: {e}")
-            # Do NOT crash the app in production if Redis is down. 
-            # Better to be slow than dead.
             app.state.redis_client = None
+
+        # --- 2) Self-Healing: Run missing migrations ---
+        try:
+            from sqlalchemy import text
+            from app.db.session import engine
+            async with engine.begin() as conn:
+                await conn.execute(text("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+                await conn.execute(text("ALTER TABLE members ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+            logging.info("Self-healing: Applied missing database columns (is_active).")
+        except Exception as e:
+            logging.error(f"Self-healing migrations failed: {e}")
 
         yield
 
