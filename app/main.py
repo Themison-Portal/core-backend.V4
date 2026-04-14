@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.query import router as query_router
@@ -156,6 +157,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 # app = FastAPI()
+
+# Trust proxy headers (X-Forwarded-For, X-Forwarded-Proto) from Cloud Run load balancer
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 
 # CORS configuration for production
 # Note: For production, specify exact origins instead of ['*'] for better security
