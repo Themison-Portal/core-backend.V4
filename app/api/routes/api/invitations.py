@@ -43,7 +43,22 @@ async def list_invitations(
     query = query.order_by(Invitation.invited_at.desc())
 
     result = await db.execute(query)
-    return result.scalars().all()
+    invitations = result.scalars().all()
+    return [
+        {
+            "id": inv.id,
+            "email": inv.email,
+            "name": inv.name,
+            "org_role": inv.initial_role,
+            "organization_id": inv.organization_id,
+            "status": inv.status,
+            "invited_by": inv.invited_by,
+            "invited_at": inv.invited_at,
+            "expires_at": inv.expires_at,
+            "accepted_at": inv.accepted_at,
+        }
+        for inv in invitations
+    ]
 
 
 @router.get("/validate/{token}")
