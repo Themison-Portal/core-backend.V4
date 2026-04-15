@@ -11,7 +11,7 @@ from app.dependencies.db import get_db
 from app.dependencies.auth import get_current_member
 from app.contracts.tasks import TaskResponse, TaskCreate, TaskUpdate, AssignedUser
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(tags=["tasks"])
 
 
 # -----------------------
