@@ -1,4 +1,4 @@
-﻿"""
+"""
 Main application file
 """
 
@@ -64,6 +64,65 @@ async def lifespan(app: FastAPI):
             logging.error(f"Redis connection failed: {e}")
             raise RuntimeError("Failed to connect to Redis") from e            
         
+        # --- 2) Self-Healing: Run missing migrations ---
+        try:
+            from sqlalchemy import text
+            from app.db.session import engine
+            
+            async with engine.connect() as conn:
+                # Helper to check if column exists
+                async def column_exists(table, column):
+                    res = await conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = :t AND column_name = :c"
+                    ), {"t": table, "c": column})
+                    return res.scalar() is not None
+
+                # Profiles
+                if not await column_exists('profiles', 'is_active'):
+                    logging.info("Adding profiles.is_active...")
+                    await conn.execute(text("ALTER TABLE profiles ADD COLUMN is_active BOOLEAN DEFAULT TRUE;"))
+                    await conn.commit()
+
+                # Members
+                if not await column_exists('members', 'is_active'):
+                    logging.info("Adding members.is_active...")
+                    await conn.execute(text("ALTER TABLE members ADD COLUMN is_active BOOLEAN DEFAULT TRUE;"))
+                    await conn.commit()
+
+                # Invitations
+                if not await column_exists('invitations', 'token'):
+                    logging.info("Adding and populating invitations.token...")
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN token TEXT;"))
+                    await conn.execute(text("UPDATE invitations SET token = MD5(random()::text) WHERE token IS NULL;"))
+                    await conn.execute(text("ALTER TABLE invitations ALTER COLUMN token SET NOT NULL;"))
+                    await conn.commit()
+                
+                if not await column_exists('invitations', 'status'):
+                    logging.info("Adding invitations.status...")
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN status TEXT DEFAULT 'pending';"))
+                    await conn.commit()
+                
+                if not await column_exists('invitations', 'invited_at'):
+                    logging.info("Adding invitations.invited_at...")
+                    await conn.execute(text("ALTER TABLE invitations ADD COLUMN invited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"))
+                    await conn.commit()
+
+                # Trials (New stability columns)
+                if not await column_exists('trials', 'visit_schedule_template'):
+                    logging.info("Adding trials.visit_schedule_template...")
+                    await conn.execute(text("ALTER TABLE trials ADD COLUMN visit_schedule_template JSONB DEFAULT '{}';"))
+                    await conn.commit()
+
+                if not await column_exists('trials', 'budget_data'):
+                    logging.info("Adding trials.budget_data...")
+                    await conn.execute(text("ALTER TABLE trials ADD COLUMN budget_data JSONB DEFAULT '{}';"))
+                    await conn.commit()
+
+            logging.info("Self-healing: Migration check completed.")
+        except Exception as e:
+            logging.error(f"Self-healing migrations failed: {e}")
+        
         yield
 
     finally:
@@ -92,24 +151,25 @@ allowed_origins = [
     "http://localhost:5173",
 ]
 
-# Add FRONTEND_URL from environment if set
-frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url and frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+# Allow all origins from environment variable if set
+if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
+    allowed_origins = ["*"]
+else:
+    # Add FRONTEND_URL from environment if set
+    frontend_url = os.getenv("FRONTEND_URL")
+    if frontend_url and frontend_url not in allowed_origins:
+        allowed_origins.append(frontend_url)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True if allowed_origins != ["*"] else False,
+    allow_credentials=True if "*" not in allowed_origins else False,
     allow_methods=["*"],  # Allow all methods including OPTIONS for preflight
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
+    max_age=600,
 )
-
-# Allow all origins from environment variable if set
-if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
-    allowed_origins = ["*"]
-logging.info(f"calling root endpoint with allowed origins")
+logging.info(f"CORS initialized with origins: {allowed_origins}")
 @app.get("/")
 def root():
     return {"status": "ok"}
