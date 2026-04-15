@@ -191,23 +191,19 @@ allowed_origins = [
     "http://localhost:3000",
 ]
 
-# Allow all origins from environment variable if set
-if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
-    allowed_origins = ["*"]
-else:
-    # Add FRONTEND_URL from environment if set
-    frontend_url = os.getenv("FRONTEND_URL")
-    if frontend_url and frontend_url not in allowed_origins:
-        allowed_origins.append(frontend_url)
+# Add FRONTEND_URL from environment if set
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url and frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
 
-# Allow all origins on our production domain suffix
-allowed_origin_regex = r"https://.*\.run\.app$" if "*" not in allowed_origins else None
+# Allow all Cloud Run frontends by regex (credentials-safe, unlike "*")
+allowed_origin_regex = r"https://.*\.run\.app$"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_origin_regex=allowed_origin_regex,
-    allow_credentials=True if "*" not in allowed_origins else False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
