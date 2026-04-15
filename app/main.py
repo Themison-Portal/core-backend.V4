@@ -83,61 +83,76 @@ async def lifespan(app: FastAPI):
             async with engine.connect() as conn:
                 # Helper to check if column exists
                 async def column_exists(table, column):
+                    # Check in public schema explicitly to be safe
                     res = await conn.execute(text(
                         "SELECT 1 FROM information_schema.columns "
-                        f"WHERE table_name = '{table}' AND column_name = '{column}'"
-                    ))
+                        "WHERE table_name = :t AND column_name = :c"
+                    ), {"t": table, "c": column})
                     return res.scalar() is not None
 
                 # Profiles
                 if not await column_exists('profiles', 'is_active'):
+                    logging.info("Adding profiles.is_active...")
                     await conn.execute(text("ALTER TABLE profiles ADD COLUMN is_active BOOLEAN DEFAULT TRUE;"))
-                    logging.info("Added profiles.is_active")
+                    await conn.commit()
 
                 # Members
                 if not await column_exists('members', 'is_active'):
+                    logging.info("Adding members.is_active...")
                     await conn.execute(text("ALTER TABLE members ADD COLUMN is_active BOOLEAN DEFAULT TRUE;"))
-                    logging.info("Added members.is_active")
+                    await conn.commit()
 
                 # Invitations
                 if not await column_exists('invitations', 'token'):
+                    logging.info("Adding and populating invitations.token...")
                     await conn.execute(text("ALTER TABLE invitations ADD COLUMN token TEXT;"))
                     # Populate NULL tokens with unique values
                     await conn.execute(text("UPDATE invitations SET token = MD5(random()::text) WHERE token IS NULL;"))
                     await conn.execute(text("ALTER TABLE invitations ALTER COLUMN token SET NOT NULL;"))
-                    logging.info("Added and populated invitations.token")
+                    await conn.commit()
                 
                 if not await column_exists('invitations', 'status'):
+                    logging.info("Adding invitations.status...")
                     await conn.execute(text("ALTER TABLE invitations ADD COLUMN status TEXT DEFAULT 'pending';"))
-                    logging.info("Added invitations.status")
+                    await conn.commit()
                 
                 if not await column_exists('invitations', 'invited_at'):
+                    logging.info("Adding invitations.invited_at...")
                     await conn.execute(text("ALTER TABLE invitations ADD COLUMN invited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"))
-                    logging.info("Added invitations.invited_at")
+                    await conn.commit()
 
                 if not await column_exists('invitations', 'expires_at'):
+                    logging.info("Adding invitations.expires_at...")
                     await conn.execute(text("ALTER TABLE invitations ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE;"))
-                    logging.info("Added invitations.expires_at")
+                    await conn.commit()
 
                 if not await column_exists('invitations', 'accepted_at'):
+                    logging.info("Adding invitations.accepted_at...")
                     await conn.execute(text("ALTER TABLE invitations ADD COLUMN accepted_at TIMESTAMP WITH TIME ZONE;"))
-                    logging.info("Added invitations.accepted_at")
+                    await conn.commit()
 
                 # Trials (New stability columns)
                 if not await column_exists('trials', 'visit_schedule_template'):
+                    logging.info("Adding trials.visit_schedule_template...")
                     await conn.execute(text("ALTER TABLE trials ADD COLUMN visit_schedule_template JSONB DEFAULT '{}';"))
-                    logging.info("Added trials.visit_schedule_template")
+                    await conn.commit()
 
                 if not await column_exists('trials', 'budget_data'):
+                    logging.info("Adding trials.budget_data...")
                     await conn.execute(text("ALTER TABLE trials ADD COLUMN budget_data JSONB DEFAULT '{}';"))
-                    logging.info("Added trials.budget_data")
+                    await conn.commit()
 
                 # Patient Visits
                 if not await column_exists('patient_visits', 'cost_data'):
+                    logging.info("Adding patient_visits.cost_data...")
                     await conn.execute(text("ALTER TABLE patient_visits ADD COLUMN cost_data JSONB DEFAULT '{}';"))
-                    logging.info("Added patient_visits.cost_data")
-                
-                await conn.commit()
+                    await conn.commit()
+
+                # Trial Members
+                if not await column_exists('trial_members', 'settings'):
+                    logging.info("Adding trial_members.settings...")
+                    await conn.execute(text("ALTER TABLE trial_members ADD COLUMN settings JSONB DEFAULT '{}';"))
+                    await conn.commit()
                 
             logging.info("Self-healing: Migration check completed.")
         except Exception as e:
@@ -176,28 +191,29 @@ allowed_origins = [
     "http://localhost:3000",
 ]
 
-# Allow all origins on our production domain suffix
-allowed_origin_regex = r"https://.*\.run\.app$"
+# Allow all origins from environment variable if set
+if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
+    allowed_origins = ["*"]
+else:
+    # Add FRONTEND_URL from environment if set
+    frontend_url = os.getenv("FRONTEND_URL")
+    if frontend_url and frontend_url not in allowed_origins:
+        allowed_origins.append(frontend_url)
 
-# Add FRONTEND_URL from environment if set
-frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url and frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+# Allow all origins on our production domain suffix
+allowed_origin_regex = r"https://.*\.run\.app$" if "*" not in allowed_origins else None
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_origin_regex=allowed_origin_regex,
-    allow_credentials=True,
+    allow_credentials=True if "*" not in allowed_origins else False,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
+    max_age=600,
 )
-
-# Allow all origins from environment variable if set
-if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
-    allowed_origins = ["*"]
-logging.info(f"calling root endpoint with allowed origins")
+logging.info(f"CORS initialized with origins: {allowed_origins}")
 
 
 @app.get("/")

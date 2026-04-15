@@ -51,7 +51,7 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars="USE_GRPC_RAG=true" \
             --set-env-vars="AUTH_DISABLED=false" \
-            --set-env-vars="ALLOW_ALL_ORIGINS=false" \
+            --set-env-vars="ALLOW_ALL_ORIGINS=true" \
             --set-env-vars="GCS_PROJECT_ID=${{ env.PROJECT_ID }}" \
             --set-env-vars="FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
             --set-env-vars="EMAIL_FROM=${{ secrets.EMAIL_FROM }}" \
