@@ -147,23 +147,25 @@ allowed_origins = [
     "https://core-frontend-v3.vercel.app",
     "https://core-frontend-v3-improvements.vercel.app",
     "https://core-frontend-preview.vercel.app",
+    "https://themison-frontend-eu-768873408671.europe-west1.run.app",
     "http://localhost:8080",
     "http://localhost:5173",
+    "http://localhost:3000",
 ]
 
-# Allow all origins from environment variable if set
-if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
-    allowed_origins = ["*"]
-else:
-    # Add FRONTEND_URL from environment if set
-    frontend_url = os.getenv("FRONTEND_URL")
-    if frontend_url and frontend_url not in allowed_origins:
-        allowed_origins.append(frontend_url)
+# Allow all Cloud Run frontends by regex (credentials-safe, unlike "*")
+allowed_origin_regex = r"https://.*\.run\.app$"
+
+# Add FRONTEND_URL from environment if set
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url and frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True if "*" not in allowed_origins else False,
+    allow_origin_regex=allowed_origin_regex,
+    allow_credentials=True,
     allow_methods=["*"],  # Allow all methods including OPTIONS for preflight
     allow_headers=["*"],
     expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
