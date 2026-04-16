@@ -15,6 +15,7 @@ class Task(Base):
     description = Column(String, nullable=True)
     status = Column(String, nullable=False, default="todo")
     priority = Column(String, nullable=True)
+    category = Column(String, nullable=True)
     assigned_to = Column(UUID(as_uuid=True), ForeignKey("members.id"), nullable=True)
     due_date = Column(DateTime, nullable=True)
     patient_id = Column(UUID(as_uuid=True), ForeignKey("patients.id"), nullable=True)

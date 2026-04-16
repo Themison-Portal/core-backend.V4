@@ -90,6 +90,14 @@ async def lifespan(app: FastAPI):
                     ), {"t": table, "c": column})
                     return res.scalar() is not None
 
+                # Ensure organization_member_type ENUM exists
+                try:
+                    await conn.execute(text("SELECT 'admin'::organization_member_type;"))
+                except Exception:
+                    logging.info("Creating ENUM organization_member_type...")
+                    await conn.execute(text("CREATE TYPE organization_member_type AS ENUM ('admin', 'staff');"))
+                    await conn.commit()
+
                 # Profiles
                 if not await column_exists('profiles', 'is_active'):
                     logging.info("Adding profiles.is_active...")
@@ -153,6 +161,12 @@ async def lifespan(app: FastAPI):
                     logging.info("Adding trial_members.settings...")
                     await conn.execute(text("ALTER TABLE trial_members ADD COLUMN settings JSONB DEFAULT '{}';"))
                     await conn.commit()
+
+                # Tasks
+                if not await column_exists('tasks', 'category'):
+                    logging.info("Adding tasks.category...")
+                    await conn.execute(text("ALTER TABLE tasks ADD COLUMN category TEXT;"))
+                    await conn.commit()
                 
             logging.info("Self-healing: Migration check completed.")
         except Exception as e:
@@ -191,13 +205,20 @@ allowed_origins = [
     "http://localhost:3000",
 ]
 
+# Allow all origins from environment variable if set
+is_allow_all = os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
+
 # Add FRONTEND_URL from environment if set
 frontend_url = os.getenv("FRONTEND_URL")
 if frontend_url and frontend_url not in allowed_origins:
     allowed_origins.append(frontend_url)
 
-# Allow all Cloud Run frontends by regex (credentials-safe, unlike "*")
-allowed_origin_regex = r"https://.*\.run\.app$"
+# If allow_all is requested, we use a regex to allow everything while still allowing credentials
+if is_allow_all:
+    allowed_origins = []
+    allowed_origin_regex = r".*"
+else:
+    allowed_origin_regex = r"https://.*\.run\.app$"
 
 app.add_middleware(
     CORSMiddleware,
@@ -209,7 +230,7 @@ app.add_middleware(
     expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
     max_age=600,
 )
-logging.info(f"CORS initialized with origins: {allowed_origins}")
+logging.info(f"CORS initialized. Allow All: {is_allow_all}. Origins: {len(allowed_origins)}")
 
 
 @app.get("/")

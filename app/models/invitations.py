@@ -34,3 +34,7 @@ class Invitation(Base):
     )
     expires_at: Mapped[Optional[datetime]] = Column(DateTime(timezone=True), nullable=True)
     accepted_at: Mapped[Optional[datetime]] = Column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def org_role(self):
+        return self.initial_role

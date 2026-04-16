@@ -26,6 +26,7 @@ class TaskResponse(BaseModel):
     patient_id: Optional[UUID] = None
     visit_id: Optional[UUID] = None
     activity_type_id: Optional[UUID] = None
+    category: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -44,6 +45,7 @@ class TaskCreate(BaseModel):
     patient_id: Optional[UUID] = None
     visit_id: Optional[UUID] = None
     activity_type_id: Optional[UUID] = None
+    category: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -59,6 +61,7 @@ class TaskUpdate(BaseModel):
     patient_id: Optional[UUID] = None
     visit_id: Optional[UUID] = None
     activity_type_id: Optional[UUID] = None
+    category: Optional[str] = None
 
     class Config:
         orm_mode = True
