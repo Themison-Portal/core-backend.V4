@@ -90,6 +90,29 @@ async def lifespan(app: FastAPI):
                     ), {"t": table, "c": column})
                     return res.scalar() is not None
 
+                # Ensure uuid-ossp extension exists for UUID generation
+                try:
+                    await conn.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"))
+                    await conn.commit()
+                except Exception as e:
+                    logging.warning(f"Could not create uuid-ossp extension: {e}")
+
+                # Ensure themison_admins table exists for JIT provisioning
+                try:
+                    await conn.execute(text(
+                        "CREATE TABLE IF NOT EXISTS themison_admins ("
+                        "id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),"
+                        "email TEXT NOT NULL UNIQUE,"
+                        "name TEXT,"
+                        "active BOOLEAN DEFAULT TRUE,"
+                        "created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,"
+                        "created_by UUID"
+                        ");"
+                    ))
+                    await conn.commit()
+                except Exception as e:
+                    logging.warning(f"Could not ensure themison_admins table: {e}")
+
                 # Ensure organization_member_type ENUM exists
                 try:
                     await conn.execute(text("SELECT 'admin'::organization_member_type;"))
