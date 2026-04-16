@@ -190,7 +190,7 @@ async def batch_create_invitations(
 
         inv = Invitation(
             email=item.email,
-            name=item.name,
+            name=item.name or item.email.split("@")[0],
             organization_id=org_id,
             initial_role=item.org_role,
             invited_by=member.id,

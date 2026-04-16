@@ -11,7 +11,7 @@ from .base import BaseContract
 
 class InvitationBase(BaseContract):
     email: str
-    name: str
+    name: Optional[str] = None
     org_role: str
 
 
@@ -27,7 +27,7 @@ class InvitationResponse(InvitationBase):
 
 class InvitationBatchItem(BaseContract):
     email: str
-    name: str
+    name: Optional[str] = None
     org_role: str
 
 
