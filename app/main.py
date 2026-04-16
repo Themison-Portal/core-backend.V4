@@ -33,6 +33,7 @@ from app.api.routes.api.patient_documents import router as patient_documents_rou
 from app.api.routes.api.chat_sessions import router as chat_sessions_router
 from app.api.routes.api.chat_messages import router as chat_messages_router
 from app.api.routes.api.qa_repository import router as qa_repository_router
+from app.api.routes.api.archive import router as archive_router
 
 from app.api.routes.api.tasks import router as tasks_router
 from app.api.routes.api.activities import router as trial_activities_router
@@ -275,6 +276,7 @@ async def debug_config():
 
 
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(archive_router, prefix="/api/archive", tags=["archive"])
 
 app.include_router(
     upload_router,
