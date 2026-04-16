@@ -361,6 +361,46 @@ CREATE TABLE IF NOT EXISTS chat_document_links (
     PRIMARY KEY (chat_session_id, document_id)
 );
 
+-- Activity Types (catalog of possible visit activities)
+CREATE TABLE IF NOT EXISTS activity_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    category TEXT,
+    description TEXT,
+    deleted_at TIMESTAMPTZ
+);
+
+-- Trial Activity Types (per-trial customized activities)
+CREATE TABLE IF NOT EXISTS trial_activity_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trial_id UUID REFERENCES trials(id),
+    activity_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    category TEXT,
+    description TEXT,
+    is_custom BOOLEAN DEFAULT TRUE,
+    deleted_at TIMESTAMPTZ
+);
+
+-- Tasks
+CREATE TABLE IF NOT EXISTS tasks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trial_id UUID NOT NULL REFERENCES trials(id),
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'todo',
+    priority TEXT,
+    assigned_to UUID REFERENCES members(id),
+    due_date TIMESTAMP,
+    patient_id UUID REFERENCES patients(id),
+    visit_id UUID REFERENCES patient_visits(id),
+    activity_type_id UUID REFERENCES activity_types(id),
+    created_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+
 -- ===================
 -- 5. RAG TABLES
 -- ===================
