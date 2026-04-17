@@ -2,6 +2,7 @@
 Auth0 Management API Client - Handles administrative tasks like creating users.
 """
 import logging
+import time
 import httpx
 from typing import Any, Dict, Optional
 from app.config import get_settings
@@ -23,9 +24,13 @@ class Auth0ManagementClient:
             self.client_secret = ""
             self.audience = ""
         self._token: Optional[str] = None
+        self._token_expires_at: float = 0
 
     async def _get_access_token(self) -> str:
         """Get an Access Token for the Management API using Client Credentials flow."""
+        if self._token and time.time() < self._token_expires_at:
+            return self._token
+
         url = f"https://{self.domain}/oauth/token"
         payload = {
             "client_id": self.client_id,
@@ -33,12 +38,14 @@ class Auth0ManagementClient:
             "audience": self.audience,
             "grant_type": "client_credentials"
         }
-        
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
             data = resp.json()
-            return data["access_token"]
+            self._token = data["access_token"]
+            self._token_expires_at = time.time() + data.get("expires_in", 3600) - 60
+            return self._token
 
     async def create_user(self, email: str, password: str, name: str) -> Dict[str, Any]:
         """
