@@ -9,6 +9,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 
 from app.contracts.invitation import (
     InvitationBatchCreate,
@@ -23,6 +25,7 @@ from app.models.organizations import Organization
 from app.services.email_service import email_service
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -84,7 +87,7 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
             detail=f"Invitation is not pending (current status: {invitation.status})",
         )
 
-    if invitation.expires_at and invitation.expires_at < datetime.utcnow():
+    if invitation.expires_at and invitation.expires_at < datetime.now(timezone.utc):
         # Optionally, mark invitation as expired in DB
         invitation.status = "expired"
         await db.commit()
@@ -94,9 +97,11 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
         )
 
     # Fetch organization details
-    org_result = await db.execute(select(Organization).where(Organization.id == invitation.organization_id))
+    org_result = await db.execute(
+        select(Organization).where(Organization.id == invitation.organization_id)
+    )
     org = org_result.scalars().first()
-    
+
     # Format according to Frontend expectations
     return {
         "id": str(invitation.id),
@@ -105,12 +110,12 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
         "org_role": invitation.initial_role,
         "organization": {
             "id": str(invitation.organization_id),
-            "name": org.name if org else "Themison"
+            "name": org.name if org else "Themison",
         },
         "name": invitation.name,
         "expires_at": (
             invitation.expires_at.isoformat() if invitation.expires_at else None
-        )
+        ),
     }
 
 
@@ -165,7 +170,9 @@ async def batch_create_invitations(
     created = []
 
     for item in payload.invitations:
-        logger.info(f"[TRACE] Processing invitation for: {item.email} (Role: {item.org_role})")
+        logger.info(
+            f"[TRACE] Processing invitation for: {item.email} (Role: {item.org_role})"
+        )
         # Check email uniqueness within org
         existing = (
             (
@@ -182,11 +189,18 @@ async def batch_create_invitations(
         )
 
         if existing:
-            logger.warning(f"[TRACE] Pending invitation already exists for {item.email}")
-            raise HTTPException(
-                status_code=409,
-                detail=f"Pending invitation already exists for {item.email}",
-            )
+            # logger.warning(f"[TRACE] Pending invitation already exists for {item.email}")
+            # raise HTTPException(
+            #     status_code=409,
+            #     detail=f"Pending invitation already exists for {item.email}",
+            # )
+
+            existing.invited_at = datetime.now(timezone.utc)
+            existing.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+            existing.initial_role = item.org_role
+            existing.invited_by = member.id
+            created.append(existing)
+            continue
 
         inv = Invitation(
             email=item.email,
@@ -203,27 +217,30 @@ async def batch_create_invitations(
     org_result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = org_result.scalars().first()
     org_name = org.name if org else "Themison"
-    logger.info(f"[TRACE] Organization found: {org_name}. Committing database session...")
+    logger.info(
+        f"[TRACE] Organization found: {org_name}. Committing database session..."
+    )
 
     try:
         await db.commit()
-        logger.info(f"[TRACE] Database commit SUCCESSFUL for {len(created)} invitations.")
+        logger.info(
+            f"[TRACE] Database commit SUCCESSFUL for {len(created)} invitations."
+        )
     except Exception as e:
         logger.error(f"[TRACE] Database commit FAILED: {e}")
         await db.rollback()
         raise
-    
+
     # Refresh and send emails
     for inv in created:
         await db.refresh(inv)
-        logger.info(f"[TRACE] Dispatching email for {inv.email} with token: {inv.token[:8]}...")
+        logger.info(
+            f"[TRACE] Dispatching email for {inv.email} with token: {inv.token[:8]}..."
+        )
         # Trigger email (asynchronous logs for now)
         sent = await email_service.send_invitation_email(
-            email=inv.email,
-            name=inv.name,
-            token=inv.token,
-            org_name=org_name
+            email=inv.email, name=inv.name, token=inv.token, org_name=org_name
         )
         logger.info(f"[TRACE] Email service result for {inv.email}: {sent}")
-        
+
     return created
