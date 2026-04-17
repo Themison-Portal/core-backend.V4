@@ -19,12 +19,12 @@ class Invitation(Base):
     id: Mapped[UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     token: Mapped[str] = Column(Text, nullable=False, default=lambda: uuid.uuid4().hex)
     email: Mapped[str] = Column(Text, nullable=False)
-    name: Mapped[str] = Column(Text, nullable=False)
+    name: Mapped[Optional[str]] = Column(Text, nullable=True)
     organization_id: Mapped[UUID] = Column(
         UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
     )
     initial_role: Mapped[str] = Column(
-        ENUM("admin", "staff", name="organization_member_type", create_type=False),
+        ENUM("admin", "staff", "superadmin", "editor", "viewer", name="organization_member_type", create_type=False),
         nullable=False,
     )
     status: Mapped[Optional[str]] = Column(Text, default="pending")

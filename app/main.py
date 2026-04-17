@@ -186,6 +186,25 @@ async def lifespan(app: FastAPI):
                     await conn.execute(text("ALTER TABLE trial_members ADD COLUMN settings JSONB DEFAULT '{}';"))
                     await conn.commit()
 
+                # Self-healing: Check and update ENUM type if needed
+                try:
+                    # 1. Expand the ENUM with missing roles
+                    for role in ["superadmin", "editor", "viewer"]:
+                        try:
+                            await conn.execute(text(f"ALTER TYPE organization_member_type ADD VALUE IF NOT EXISTS '{role}'"))
+                            await conn.commit()
+                        except Exception as e:
+                            logging.warning(f"Failed to add role {role} (likely exists): {e}")
+
+                    # 2. Hard-force make name nullable in invitations table
+                    try:
+                        await conn.execute(text("ALTER TABLE invitations ALTER COLUMN name DROP NOT NULL"))
+                        await conn.commit()
+                    except Exception as e:
+                        logging.warning(f"Failed to force nullable name column: {e}")
+                except Exception as e:
+                    logging.error(f"Database self-healing failed: {e}")
+
                 # Tasks
                 if not await column_exists('tasks', 'category'):
                     logging.info("Adding tasks.category...")
@@ -255,6 +274,28 @@ app.add_middleware(
     max_age=600,
 )
 logging.info(f"CORS initialized. Allow All: {is_allow_all}. Origins: {len(allowed_origins)}")
+
+
+@app.get("/debug-config")
+async def debug_config():
+    """Diagnostic endpoint to verify current env vars and DB roles."""
+    from sqlalchemy import text
+    from app.db.session import engine
+    
+    enum_labels = []
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT enumlabel FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE typname = 'organization_member_type'"))
+            enum_labels = [row[0] for row in result]
+    except Exception as e:
+        enum_labels = [f"Error: {e}"]
+
+    return {
+        "FRONTEND_URL": os.getenv("FRONTEND_URL"),
+        "AUTH0_DOMAIN": os.getenv("AUTH0_DOMAIN"),
+        "DB_ROLES_IN_SCHEMA": enum_labels,
+        "SENDGRID_CONFIGURED": bool(os.getenv("SENDGRID_API_KEY"))
+    }
 
 
 @app.get("/")
