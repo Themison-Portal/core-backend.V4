@@ -24,7 +24,7 @@ class Invitation(Base):
         UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
     )
     initial_role: Mapped[str] = Column(
-        ENUM("admin", "staff", "superadmin", "editor", "viewer", name="organization_member_type", create_type=False),
+        ENUM("admin", "staff", "superadmin", "editor", "viewer", "reader", name="organization_member_type", create_type=False),
         nullable=False,
     )
     status: Mapped[Optional[str]] = Column(Text, default="pending")

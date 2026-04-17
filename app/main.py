@@ -189,7 +189,7 @@ async def lifespan(app: FastAPI):
                 # Self-healing: Check and update ENUM type if needed
                 try:
                     # 1. Expand the ENUM with missing roles
-                    for role in ["superadmin", "editor", "viewer"]:
+                    for role in ["superadmin", "editor", "viewer", "reader"]:
                         try:
                             await conn.execute(text(f"ALTER TYPE organization_member_type ADD VALUE IF NOT EXISTS '{role}'"))
                             await conn.commit()
