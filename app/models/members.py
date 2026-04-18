@@ -26,8 +26,9 @@ class Member(Base):
         UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False
     )
     default_role: Mapped[str] = Column(
-        ENUM("admin", "staff", name="organization_member_type", create_type=False),
+        ENUM("admin", "staff", "superadmin", "editor", "viewer", name="organization_member_type", create_type=False),
         nullable=False,
+        default="staff",
     )
     invited_by: Mapped[Optional[UUID]] = Column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[Optional[datetime]] = Column(

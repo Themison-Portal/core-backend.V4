@@ -27,7 +27,7 @@ class Auth0ManagementClient:
         self._token_expires_at: float = 0
 
     async def _get_access_token(self) -> str:
-        """Get an Access Token for the Management API using Client Credentials flow."""
+        """Get an Access Token for the Management API using Client Credentials flow (Cached)."""
         if self._token and time.time() < self._token_expires_at:
             return self._token
 
