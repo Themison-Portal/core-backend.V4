@@ -6,8 +6,10 @@ import logging
 from datetime import timedelta
 from typing import Optional
 
+import google.auth
 from google.cloud import storage as gcs
 from google.oauth2 import service_account
+from google.auth.transport import requests as auth_requests
 
 from app.config import get_settings
 from app.services.storage.base import StorageService
@@ -70,11 +72,30 @@ class GCSStorageService(StorageService):
         """Return a signed download URL valid for ``expiration_hours``."""
         bucket = self._client.bucket(bucket_name)
         blob = bucket.blob(blob_path)
-        return blob.generate_signed_url(
-            version="v4",
-            expiration=timedelta(hours=expiration_hours),
-            method="GET",
-        )
+
+        try:
+            return blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(hours=expiration_hours),
+                method="GET",
+            )
+        except AttributeError:
+            # Cloud Run default credentials lack a private key;
+            # fall back to IAM signBlob API
+            credentials, _ = google.auth.default()
+            if hasattr(credentials, "refresh"):
+                credentials.refresh(auth_requests.Request())
+            signing_credentials = google.auth.compute_engine.IDTokenCredentials(
+                request=auth_requests.Request(),
+                target_audience="",
+            )
+            return blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(hours=expiration_hours),
+                method="GET",
+                service_account_email=credentials.service_account_email,
+                access_token=credentials.token,
+            )
 
     def delete_file(self, bucket_name: str, blob_path: str) -> None:
         """Delete a blob from GCS. Silently ignores missing files."""
