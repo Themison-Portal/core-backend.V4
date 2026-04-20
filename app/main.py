@@ -253,8 +253,11 @@ is_allow_all = os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
 
 # Add FRONTEND_URL from environment if set
 frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url and frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+if frontend_url:
+    # Robustness: strip trailing slash if present
+    frontend_url = frontend_url.rstrip("/")
+    if frontend_url not in allowed_origins:
+        allowed_origins.append(frontend_url)
 
 # If allow_all is requested, we use a regex to allow everything while still allowing credentials
 if is_allow_all:

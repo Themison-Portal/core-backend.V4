@@ -91,7 +91,8 @@ async def signup_complete(
         raise HTTPException(status_code=400, detail="Invitation already used or expired")
     
     # Check expiration
-    if invitation.expires_at and invitation.expires_at < datetime.utcnow():
+    from datetime import timezone
+    if invitation.expires_at and invitation.expires_at < datetime.now(timezone.utc):
         invitation.status = "expired"
         await db.commit()
         raise HTTPException(status_code=400, detail="Invitation has expired")
@@ -145,7 +146,8 @@ async def signup_complete(
         
         # 4. Update Invitation
         invitation.status = "accepted"
-        invitation.accepted_at = datetime.utcnow()
+        from datetime import timezone
+        invitation.accepted_at = datetime.now(timezone.utc)
         
         await db.commit()
         
