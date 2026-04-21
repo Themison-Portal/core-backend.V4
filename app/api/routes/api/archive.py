@@ -79,7 +79,7 @@ async def delete_folder(
     )
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
-    folder.deleted_at = datetime.now(timezone.utc)
+    folder.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
 
 
@@ -163,5 +163,5 @@ async def delete_saved_response(
     )
     if not response:
         raise HTTPException(status_code=404, detail="Saved response not found")
-    response.deleted_at = datetime.now(timezone.utc)
+    response.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()

@@ -26,7 +26,7 @@ class DocumentChunkDocling(Base):
     page_number: Mapped[int] = Column(Integer, nullable=True)
     chunk_metadata: Mapped[Dict] = Column("chunk_metadata", JSON)
     embedding: Mapped[List[float]] = Column(Vector(1536))
-    created_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Phase 1: Hybrid search - tsvector for BM25 full-text search
     # This is a PostgreSQL GENERATED ALWAYS column - Computed() excludes it from INSERT/UPDATE

@@ -29,5 +29,5 @@ class User(Base):
     email = Column(String(255), unique=True)
     password = Column(UUID(as_uuid=True))
     role: Mapped[UserRole] = Column(SQLEnum(UserRole), default=UserRole.USER)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

@@ -71,8 +71,8 @@ async def create_message(
     )
     db.add(msg)
 
-    # Update session.updated_at
-    session.updated_at = datetime.now(timezone.utc)
+    # Update session.updated_at — naive UTC to match DB column type (TIMESTAMP WITHOUT TIME ZONE)
+    session.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     await db.commit()
     await db.refresh(msg)
@@ -110,7 +110,7 @@ async def update_message(
         )
 
     msg.content = content
-    msg.updated_at = datetime.now(timezone.utc)
+    msg.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
@@ -148,6 +148,6 @@ async def delete_message(
             status_code=403, detail="Not authorized to delete this message"
         )
 
-    msg.deleted_at = datetime.now(timezone.utc)
+    msg.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.add(msg)
     await db.commit()
