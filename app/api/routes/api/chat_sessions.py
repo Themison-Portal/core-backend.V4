@@ -74,6 +74,33 @@ async def create_chat_session(
     }
 
 
+@router.get("/{session_id}")
+async def get_chat_session(
+    session_id: UUID,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ChatSession).where(
+            ChatSession.id == session_id,
+            ChatSession.user_id == member.profile_id,
+        )
+    )
+    session = result.scalars().first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+
+    return {
+        "id": str(session.id),
+        "title": session.title,
+        "trial_id": str(session.trial_id) if session.trial_id else None,
+        "document_id": str(session.document_id) if session.document_id else None,
+        "document_name": session.document_name,
+        "created_at": session.created_at.isoformat() if session.created_at else None,
+        "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+    }
+
+
 @router.put("/{session_id}")
 async def update_chat_session(
     session_id: UUID,
