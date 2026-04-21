@@ -5,7 +5,7 @@
 -- =====================================================
 
 ALTER TABLE chat_sessions
-  ADD COLUMN IF NOT EXISTS document_id UUID REFERENCES documents(id);
+  ADD COLUMN IF NOT EXISTS document_id UUID REFERENCES trial_documents(id);
 
 ALTER TABLE chat_sessions
   ADD COLUMN IF NOT EXISTS document_name TEXT;
