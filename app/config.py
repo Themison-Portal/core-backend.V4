@@ -71,10 +71,14 @@ class Settings(BaseSettings):
 
     @field_validator("*", mode="before")
     @classmethod
-    def strip_strings(cls, v: Any) -> Any:
-        """Strip whitespace from all string inputs to handle 'dirty' secrets."""
+    def strip_strings(cls, v: Any, info) -> Any:
+        """Strip whitespace from all string inputs and trailing slashes from URLs."""
         if isinstance(v, str):
-            return v.strip()
+            v = v.strip()
+            # If the field is a URL field, strip the trailing slash
+            if info.field_name == "frontend_url":
+                v = v.rstrip("/")
+            return v
         return v
 
     class Config:
