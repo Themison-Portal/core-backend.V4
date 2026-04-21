@@ -158,8 +158,11 @@ allowed_origin_regex = r"https://.*\.run\.app$"
 
 # Add FRONTEND_URL from environment if set
 frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url and frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+if frontend_url:
+    # Robustness: strip trailing slash if present
+    frontend_url = frontend_url.rstrip("/")
+    if frontend_url not in allowed_origins:
+        allowed_origins.append(frontend_url)
 
 app.add_middleware(
     CORSMiddleware,

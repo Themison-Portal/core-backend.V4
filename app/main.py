@@ -268,8 +268,11 @@ is_allow_all = os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
 
 # Add FRONTEND_URL from environment if set
 frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url and frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+if frontend_url:
+    # Robustness: strip trailing slash if present
+    frontend_url = frontend_url.rstrip("/")
+    if frontend_url not in allowed_origins:
+        allowed_origins.append(frontend_url)
 
 # If allow_all is requested, we use a regex to allow everything while still allowing credentials
 if is_allow_all:
@@ -291,28 +294,6 @@ app.add_middleware(
 logging.info(f"CORS initialized. Allow All: {is_allow_all}. Origins: {len(allowed_origins)}")
 
 
-@app.get("/debug-config")
-async def debug_config():
-    """Diagnostic endpoint to verify current env vars and DB roles."""
-    from sqlalchemy import text
-    from app.db.session import engine
-    
-    enum_labels = []
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT enumlabel FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE typname = 'organization_member_type'"))
-            enum_labels = [row[0] for row in result]
-    except Exception as e:
-        enum_labels = [f"Error: {e}"]
-
-    return {
-        "FRONTEND_URL": os.getenv("FRONTEND_URL"),
-        "AUTH0_DOMAIN": os.getenv("AUTH0_DOMAIN"),
-        "DB_ROLES_IN_SCHEMA": enum_labels,
-        "SENDGRID_CONFIGURED": bool(os.getenv("SENDGRID_API_KEY"))
-    }
-
-
 @app.get("/")
 def root():
     return {"status": "ok", "version": "4.0.2-CORS-FORCE", "message": "Themison Backend API"}
@@ -329,48 +310,54 @@ def health():
 
 @app.get("/debug-config")
 async def debug_config():
-    from app.config import get_settings
-    from sqlalchemy import select, func
+    """Comprehensive diagnostic endpoint for env vars, connection health, and DB stats."""
+    from sqlalchemy import text, select, func
+    from app.db.session import engine
     from app.dependencies.db import get_db
     from app.models.profiles import Profile
     from app.models.members import Member
     from app.models.organizations import Organization
     
-    settings = get_settings()
-    
-    p_count = -1
-    m_count = -1
-    o_count = -1
-    
+    # 1. Check ENUM roles in DB
+    enum_labels = []
     try:
-        # Get DB session from generator
+        async with engine.connect() as conn:
+            result = await conn.execute(text("SELECT enumlabel FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE typname = 'organization_member_type'"))
+            enum_labels = [row[0] for row in result.all()]
+    except Exception as e:
+        enum_labels = [f"Error: {e}"]
+
+    # 2. Check DB Stats (Counts)
+    p_count, m_count, o_count = -1, -1, -1
+    try:
         db_gen = get_db()
         db = await db_gen.__anext__()
-        try:
-            p_count = (await db.execute(select(func.count()).select_from(Profile))).scalar()
-            m_count = (await db.execute(select(func.count()).select_from(Member))).scalar()
-            o_count = (await db.execute(select(func.count()).select_from(Organization))).scalar()
-        finally:
-            # We don't strictly need to close here as it's a debug endpoint 
-            # and the generator will handle it if we let it, but simple is better
-            pass
+        p_count = (await db.execute(select(func.count()).select_from(Profile))).scalar()
+        m_count = (await db.execute(select(func.count()).select_from(Member))).scalar()
+        o_count = (await db.execute(select(func.count()).select_from(Organization))).scalar()
     except Exception as e:
         logging.error(f"Debug stats failed: {e}")
 
     return {
-        "upload_api_key_len": len(settings.upload_api_key),
-        "upload_api_key_prefix": (
-            settings.upload_api_key[:3] if settings.upload_api_key else "EMPTY"
-        ),
-        "rag_address": settings.rag_service_address,
-        "use_grpc": settings.use_grpc_rag,
-        "auth0_domain": settings.auth0_domain,
-        "auth0_audience": settings.auth0_audience,
-        "auth0_domain_len": len(settings.auth0_domain),
-        "db_stats": {
-            "profiles": p_count,
-            "members": m_count,
-            "organizations": o_count
+        "status": "online",
+        "environment": {
+            "FRONTEND_URL": os.getenv("FRONTEND_URL"),
+            "AUTH0_DOMAIN": os.getenv("AUTH0_DOMAIN"),
+            "RAG_ADDRESS": os.getenv("RAG_SERVICE_ADDRESS"),
+            "SENDGRID_CONFIGURED": bool(os.getenv("SENDGRID_API_KEY"))
+        },
+        "database": {
+            "ROLES_IN_SCHEMA": enum_labels,
+            "STATS": {
+                "profiles": p_count,
+                "members": m_count,
+                "organizations": o_count
+            }
+        },
+        "config_details": {
+            "VERSION": "4.0.2-CORS-FORCE",
+            "USE_GRPC": os.getenv("USE_GRPC_RAG", "false").lower() == "true",
+            "ALLOW_ALL_ORIGINS": os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
         }
     }
 
