@@ -245,6 +245,7 @@ def documents_retrieval_generation_tool(
         conn = psycopg2.connect(sync_url)
         try:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute("SET search_path TO public, extensions;")
             cur.execute(
                 "SELECT * FROM hybrid_search(%s, %s::vector, %s, %s)",
                 (

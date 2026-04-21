@@ -32,7 +32,8 @@ if settings:
                 "command_timeout": 60,
                 "server_settings": {
                     "statement_timeout": "60000",  # 60 seconds
-                    "idle_in_transaction_session_timeout": "60000"
+                    "idle_in_transaction_session_timeout": "60000",
+                    "search_path": "public,extensions",
                 }
             }
         )
