@@ -211,19 +211,25 @@ async def lifespan(app: FastAPI):
                     await conn.execute(text("ALTER TABLE tasks ADD COLUMN category TEXT;"))
                     await conn.commit()
 
-                # Chat Sessions
+                # Chat Sessions (New columns and Foreign Key)
+                if not await column_exists('chat_sessions', 'trial_id'):
+                    logging.info("Adding chat_sessions.trial_id...")
+                    await conn.execute(text("ALTER TABLE chat_sessions ADD COLUMN trial_id UUID REFERENCES trials(id) ON DELETE SET NULL;"))
+                    await conn.commit()
+
                 if not await column_exists('chat_sessions', 'document_id'):
-                    logging.info("Adding chat_sessions.document_id...")
-                    await conn.execute(text(
-                        "ALTER TABLE chat_sessions ADD COLUMN document_id UUID REFERENCES documents(id);"
-                    ))
+                    logging.info("Adding chat_sessions.document_id with correct FK...")
+                    await conn.execute(text("ALTER TABLE chat_sessions ADD COLUMN document_id UUID;"))
+                    # Note: Table name is trial_documents, NOT documents
+                    try:
+                        await conn.execute(text("ALTER TABLE chat_sessions ADD CONSTRAINT fk_chat_sessions_document FOREIGN KEY (document_id) REFERENCES trial_documents(id) ON DELETE SET NULL;"))
+                    except Exception as e:
+                        logging.warning(f"Could not add FK to document_id (likely exists or table mapping error): {e}")
                     await conn.commit()
 
                 if not await column_exists('chat_sessions', 'document_name'):
                     logging.info("Adding chat_sessions.document_name...")
-                    await conn.execute(text(
-                        "ALTER TABLE chat_sessions ADD COLUMN document_name TEXT;"
-                    ))
+                    await conn.execute(text("ALTER TABLE chat_sessions ADD COLUMN document_name TEXT;"))
                     await conn.commit()
 
             logging.info("Self-healing: Migration check completed.")
