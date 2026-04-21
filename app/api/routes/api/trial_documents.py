@@ -2,22 +2,27 @@
 Trial document routes — GET /, GET /{id}, POST /upload, PUT /{id}, DELETE /{id}
 """
 
+import logging
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.contracts.document import DocumentResponse, DocumentUpdate
 from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
+from app.dependencies.jobs import get_job_status_service
 from app.dependencies.storage import get_storage_service
 from app.models.documents import Document
 from app.models.members import Member
 from app.models.trials import Trial
 from app.services.crud import CRUDBase
+from app.services.jobs.job_status_service import JobStatusService
 from app.services.storage.base import StorageService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -50,6 +55,8 @@ async def get_trial_document(
 
 @router.post("/upload", response_model=DocumentResponse, status_code=201)
 async def upload_trial_document(
+    request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     trial_id: UUID = Form(...),
     document_name: str = Form(...),
@@ -58,6 +65,7 @@ async def upload_trial_document(
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
+    job_service: JobStatusService = Depends(get_job_status_service),
 ):
     crud_trial = CRUDBase(Trial, db)
     trial = await crud_trial.get(trial_id)
@@ -101,6 +109,28 @@ async def upload_trial_document(
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
+
+    # Auto-trigger RAG ingestion in background so the document becomes queryable.
+    # Failures here must not break the upload — the row is already persisted.
+    try:
+        from app.api.routes.upload import _run_ingestion_task
+
+        job_id = await job_service.create_job(doc.id)
+        redis_client = request.app.state.redis_client
+        background_tasks.add_task(
+            _run_ingestion_task,
+            job_id=job_id,
+            document_url=doc.document_url,
+            document_id=doc.id,
+            chunk_size=750,
+            redis_client=redis_client,
+            use_grpc=settings.use_grpc_rag,
+            grpc_address=settings.rag_service_address,
+        )
+        logger.info(f"Queued RAG ingestion job {job_id} for document {doc.id}")
+    except Exception as e:
+        logger.exception(f"Failed to queue RAG ingestion for document {doc.id}: {e}")
+
     return doc
 
 
