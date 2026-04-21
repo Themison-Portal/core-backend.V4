@@ -12,13 +12,8 @@ class BaseContract(BaseModel):
     """
     A base contract for all contracts.
     """
-    model_config = ConfigDict(
-        from_attributes=True,
-        alias_generator=lambda s: "".join(
-            word.capitalize() if i > 0 else word for i, word in enumerate(s.split("_"))
-        ),
-        populate_by_name=True,
-    )
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 class TimestampedContract(BaseContract):
