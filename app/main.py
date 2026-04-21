@@ -210,7 +210,22 @@ async def lifespan(app: FastAPI):
                     logging.info("Adding tasks.category...")
                     await conn.execute(text("ALTER TABLE tasks ADD COLUMN category TEXT;"))
                     await conn.commit()
-                
+
+                # Chat Sessions
+                if not await column_exists('chat_sessions', 'document_id'):
+                    logging.info("Adding chat_sessions.document_id...")
+                    await conn.execute(text(
+                        "ALTER TABLE chat_sessions ADD COLUMN document_id UUID REFERENCES documents(id);"
+                    ))
+                    await conn.commit()
+
+                if not await column_exists('chat_sessions', 'document_name'):
+                    logging.info("Adding chat_sessions.document_name...")
+                    await conn.execute(text(
+                        "ALTER TABLE chat_sessions ADD COLUMN document_name TEXT;"
+                    ))
+                    await conn.commit()
+
             logging.info("Self-healing: Migration check completed.")
         except Exception as e:
             logging.error(f"Self-healing migrations failed: {e}")

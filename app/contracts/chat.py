@@ -40,7 +40,6 @@ class ChatSessionBase(BaseContract):
     """
 
     title: str
-    user_id: UUID
 
 
 class ChatSessionCreate(ChatSessionBase):
@@ -48,7 +47,9 @@ class ChatSessionCreate(ChatSessionBase):
     A contract for creating a chat session.
     """
 
-    pass
+    trial_id: Optional[UUID] = None
+    document_id: Optional[UUID] = None
+    document_name: Optional[str] = None
 
 
 class ChatSessionUpdate(BaseContract):
@@ -65,5 +66,9 @@ class ChatSessionResponse(ChatSessionBase, TimestampedContract):
     """
 
     id: UUID
+    user_id: UUID
+    trial_id: Optional[UUID] = None
+    document_id: Optional[UUID] = None
+    document_name: Optional[str] = None
     messages: List[ChatMessageResponse]
     documents: List[DocumentResponse]

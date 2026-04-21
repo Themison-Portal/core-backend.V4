@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List
 
-from sqlalchemy import JSON, Column, DateTime, String, Text
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, relationship
 
@@ -27,6 +27,8 @@ class ChatSession(Base):
     created_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     trial_id: Mapped[UUID] = Column(UUID(as_uuid=True), nullable=True)
+    document_id: Mapped[UUID] = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=True)
+    document_name: Mapped[str] = Column(String, nullable=True)
 
     # Relationship to messages
     messages: Mapped[List[ChatMessage]] = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")

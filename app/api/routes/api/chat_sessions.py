@@ -39,6 +39,8 @@ async def list_chat_sessions(
             "id": str(s.id),
             "title": s.title,
             "trial_id": str(s.trial_id) if s.trial_id else None,
+            "document_id": str(s.document_id) if s.document_id else None,
+            "document_name": s.document_name,
             "created_at": s.created_at.isoformat() if s.created_at else None,
             "updated_at": s.updated_at.isoformat() if s.updated_at else None,
         }
@@ -55,6 +57,9 @@ async def create_chat_session(
     session = ChatSession(
         title=payload.title,
         user_id=member.profile_id,
+        trial_id=payload.trial_id,
+        document_id=payload.document_id,
+        document_name=payload.document_name,
     )
     db.add(session)
     await db.commit()
@@ -62,6 +67,9 @@ async def create_chat_session(
     return {
         "id": str(session.id),
         "title": session.title,
+        "trial_id": str(session.trial_id) if session.trial_id else None,
+        "document_id": str(session.document_id) if session.document_id else None,
+        "document_name": session.document_name,
         "created_at": session.created_at.isoformat() if session.created_at else None,
     }
 
