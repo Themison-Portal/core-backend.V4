@@ -3,7 +3,7 @@ Contracts for organizations.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from .base import BaseContract, TimestampedContract
@@ -24,6 +24,13 @@ class OrganizationUpdate(BaseContract):
     name: Optional[str] = None
     onboarding_completed: Optional[bool] = None
     support_enabled: Optional[bool] = None
+
+
+class OrganizationCreate(BaseContract):
+    name: str
+    support_enabled: bool = False
+    primary_owner_email: Optional[str] = None
+    additional_owner_emails: List[str] = []
 
 
 class OrganizationMetrics(BaseContract):
