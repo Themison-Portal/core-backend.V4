@@ -18,6 +18,7 @@ class DocumentBase(BaseContract):
     trial_id: Optional[UUID] = None
     uploaded_by: Optional[UUID] = None
     status: Optional[str] = None
+    ingestion_status: Optional[str] = None
     file_size: Optional[int] = None
     mime_type: Optional[str] = None
     version: Optional[int] = None
@@ -43,6 +44,7 @@ class DocumentUpdate(BaseContract):
     trial_id: Optional[UUID] = None
     uploaded_by: Optional[UUID] = None
     status: Optional[str] = None
+    ingestion_status: Optional[str] = None
     file_size: Optional[int] = None
     mime_type: Optional[str] = None
     version: Optional[int] = None

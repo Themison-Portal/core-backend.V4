@@ -46,6 +46,7 @@ class Document(Base):
     updated_at: Mapped[Optional[datetime]] = Column(DateTime(timezone=True), nullable=True, default=lambda: datetime.now(timezone.utc))
     uploaded_by: Mapped[Optional[UUID]] = Column(UUID(as_uuid=True), nullable=True)
     status: Mapped[Optional[str]] = Column(Text, nullable=True)
+    ingestion_status: Mapped[Optional[str]] = Column(Text, nullable=True)
     file_size: Mapped[Optional[int]] = Column(BigInteger, nullable=True)
     mime_type: Mapped[Optional[str]] = Column(String(255), nullable=True)
     version: Mapped[Optional[int]] = Column(Integer, nullable=True, default=1)

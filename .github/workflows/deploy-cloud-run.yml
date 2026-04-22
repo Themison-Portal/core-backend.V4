@@ -49,6 +49,7 @@ jobs:
             --project ${{ env.PROJECT_ID }} \
             --platform managed \
             --allow-unauthenticated \
+            --min-instances=1 \
             --set-env-vars="USE_GRPC_RAG=true" \
             --set-env-vars="AUTH_DISABLED=false" \
             --set-env-vars="ALLOW_ALL_ORIGINS=true" \

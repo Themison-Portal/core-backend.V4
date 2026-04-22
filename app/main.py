@@ -211,6 +211,23 @@ async def lifespan(app: FastAPI):
                     await conn.execute(text("ALTER TABLE tasks ADD COLUMN category TEXT;"))
                     await conn.commit()
 
+                # Trial Documents (RAG ingestion tracking)
+                if not await column_exists('trial_documents', 'ingestion_status'):
+                    logging.info("Adding trial_documents.ingestion_status...")
+                    await conn.execute(text(
+                        "ALTER TABLE trial_documents ADD COLUMN ingestion_status TEXT;"
+                    ))
+                    # Backfill: documents that already have chunks are 'ready'
+                    await conn.execute(text(
+                        "UPDATE trial_documents td "
+                        "SET ingestion_status = 'ready' "
+                        "WHERE EXISTS ("
+                        "  SELECT 1 FROM document_chunks_docling dcd "
+                        "  WHERE dcd.document_id = td.id"
+                        ");"
+                    ))
+                    await conn.commit()
+
                 # Chat Sessions (New columns and Foreign Key)
                 if not await column_exists('chat_sessions', 'trial_id'):
                     logging.info("Adding chat_sessions.trial_id...")

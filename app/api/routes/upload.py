@@ -26,6 +26,30 @@ class UploadDocumentRequest(BaseModel):
     chunk_size: Optional[int] = 750
 
 
+async def _set_ingestion_status(document_id: UUID, status: str) -> None:
+    """
+    Persist the document's RAG ingestion state to trial_documents.ingestion_status.
+    Failures are logged but never break the ingestion job — the Redis job state
+    remains the source of truth for live progress.
+    """
+    from sqlalchemy import update
+    from app.db.session import async_session
+    from app.models.documents import Document
+
+    try:
+        async with async_session() as db:
+            await db.execute(
+                update(Document)
+                .where(Document.id == document_id)
+                .values(ingestion_status=status)
+            )
+            await db.commit()
+    except Exception as e:
+        logger.warning(
+            f"Failed to set ingestion_status={status} for document {document_id}: {e}"
+        )
+
+
 async def _run_ingestion_task(
     job_id: str,
     document_url: str,
@@ -92,6 +116,7 @@ async def _run_ingestion_task(
     except Exception as e:
         logger.exception(f"Ingestion task failed for job {job_id}")
         await job_service.fail_job(job_id, str(e))
+        await _set_ingestion_status(document_id, "failed")
 
 
 async def _ingest_via_grpc(
@@ -115,11 +140,15 @@ async def _ingest_via_grpc(
         6: "complete", 7: "error",
     }
 
+    status_set = False
     async for progress in client.ingest_pdf(
         document_url=document_url,
         document_id=document_id,
         chunk_size=chunk_size,
     ):
+        if not status_set:
+            await _set_ingestion_status(document_id, "processing")
+            status_set = True
         # Map gRPC progress to job status
         raw_stage = progress.get("stage", 0)
         stage = _STAGE_NAMES.get(raw_stage, str(raw_stage))
@@ -143,6 +172,7 @@ async def _ingest_via_grpc(
         raise RuntimeError(result.get("error", "Unknown error"))
 
     await job_service.complete_job(job_id, result)
+    await _set_ingestion_status(document_id, "ready")
 
 
 async def _ingest_via_local(
@@ -177,6 +207,7 @@ async def _ingest_via_local(
             progress_percent=5,
             message="Invalidating existing cache...",
         )
+        await _set_ingestion_status(document_id, "processing")
 
         # Invalidate caches
         if cache_service:
@@ -276,6 +307,7 @@ async def _ingest_via_local(
         }
 
         await job_service.complete_job(job_id, result)
+        await _set_ingestion_status(document_id, "ready")
         logger.info(f"Ingestion complete for document {document_id}")
 
 
@@ -306,6 +338,7 @@ async def upload_pdf_document(
 
     # Create job
     job_id = await job_service.create_job(body.document_id)
+    await _set_ingestion_status(body.document_id, "queued")
 
     # Get redis client for background task
     redis_client = request.app.state.redis_client
