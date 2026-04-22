@@ -3,7 +3,7 @@ Contracts for organizations.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from .base import BaseContract, TimestampedContract
