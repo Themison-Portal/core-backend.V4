@@ -26,6 +26,13 @@ class OrganizationUpdate(BaseContract):
     support_enabled: Optional[bool] = None
 
 
+class OrganizationCreate(BaseContract):
+    name: str
+    support_enabled: bool = False
+    primary_owner_email: Optional[str] = None
+    additional_owner_emails: List[str] = []
+
+
 class OrganizationMetrics(BaseContract):
     total_members: int = 0
     total_trials: int = 0

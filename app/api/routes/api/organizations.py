@@ -10,7 +10,12 @@ from app.contracts.organization import (
     OrganizationMetrics,
     OrganizationResponse,
     OrganizationUpdate,
+    OrganizationCreate,
 )
+from app.models.invitations import Invitation
+from app.services.email_service import email_service
+
+from app.models.themison_admins import ThemisonAdmin
 from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
 from app.models.members import Member
@@ -133,7 +138,7 @@ async def list_organizations(
     db: AsyncSession = Depends(get_db),
 ):
     """List all organizations — staff only."""
-    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+
     if current_user.default_role != "staff":
         raise HTTPException(status_code=403, detail="Staff access only")
 
@@ -143,19 +148,76 @@ async def list_organizations(
 
 @router.post("/", response_model=OrganizationResponse, status_code=201)
 async def create_organization(
-    payload: OrganizationUpdate,
+    payload: OrganizationCreate,
     current_user: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new organization — staff only."""
-    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
     if current_user.default_role != "staff":
         raise HTTPException(status_code=403, detail="Staff access only")
 
-    org = Organization(**payload.model_dump())
+    # Look up themison_admin by email dynamically
+    admin_result = await db.execute(
+        select(ThemisonAdmin).where(ThemisonAdmin.email == current_user.email)
+    )
+    admin = admin_result.scalars().first()
+
+    # Fallback to first active admin if no match found
+    if not admin:
+        admin_result = await db.execute(
+            select(ThemisonAdmin).where(ThemisonAdmin.active == True)
+        )
+        admin = admin_result.scalars().first()
+
+    # Create org
+    org = Organization(
+        name=payload.name,
+        support_enabled=payload.support_enabled,
+        created_by=admin.id if admin else None,
+    )
     db.add(org)
     await db.commit()
     await db.refresh(org)
+
+    org_name = org.name
+
+    # Invite primary owner
+    if payload.primary_owner_email:
+        inv = Invitation(
+            email=payload.primary_owner_email,
+            organization_id=org.id,
+            initial_role="admin",
+            invited_by=current_user.id,
+        )
+        db.add(inv)
+        await db.commit()
+        await db.refresh(inv)
+        await email_service.send_invitation_email(
+            email=inv.email,
+            name=inv.email.split("@")[0],
+            token=inv.token,
+            org_name=org_name,
+        )
+
+    # Invite additional owners
+    for email in payload.additional_owner_emails:
+        if email.strip():
+            inv = Invitation(
+                email=email.strip(),
+                organization_id=org.id,
+                initial_role="admin",
+                invited_by=current_user.id,
+            )
+            db.add(inv)
+            await db.commit()
+            await db.refresh(inv)
+            await email_service.send_invitation_email(
+                email=inv.email,
+                name=inv.email.split("@")[0],
+                token=inv.token,
+                org_name=org_name,
+            )
+
     return org
 
 
@@ -170,7 +232,7 @@ async def get_organization_by_id(
     Staff can view any org.
     Admin can only view their own org.
     """
-    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+
     if (
         current_user.default_role != "staff"
         and str(current_user.organization_id) != org_id
@@ -196,7 +258,7 @@ async def update_organization_by_id(
     Staff can update any org.
     Admin can only update their own org.
     """
-    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+
     if (
         current_user.default_role != "staff"
         and str(current_user.organization_id) != org_id
@@ -228,7 +290,7 @@ async def patch_update_organization(
     Staff can patch any org.
     Admin can only patch their own org.
     """
-    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+
     if (
         current_user.default_role != "staff"
         and str(current_user.organization_id) != org_id
@@ -258,7 +320,7 @@ async def delete_organization_member(
     Delete a member from the organization.
     Both staff and admin can delete members.
     """
-    # ✅ Fixed: was org_role not in ["superadmin", "admin"]
+
     if current_user.default_role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete members")
 
@@ -272,8 +334,6 @@ async def delete_organization_member(
     if not member_to_delete:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    # ✅ Fixed: was checking org_role == "superadmin" which doesn't exist
-    # Prevent deleting the last admin in an org
     if member_to_delete.default_role == "admin":
         admin_count = (
             await db.execute(
@@ -291,12 +351,10 @@ async def delete_organization_member(
                 detail="Cannot remove the last admin of an organization",
             )
 
-    # ✅ Fixed: was using member_to_delete.first_name/last_name
-    # which don't exist on Member model — only name exists
     user_snapshot = {
         "id": str(member_to_delete.id),
         "email": member_to_delete.email,
-        "name": member_to_delete.name,  # ✅ Member model has 'name' not first/last
+        "name": member_to_delete.name,
         "role": member_to_delete.default_role,
     }
 
@@ -315,7 +373,7 @@ async def remove_member_from_org(
     db: AsyncSession = Depends(get_db),
 ):
     """Remove member from organization — staff and admin."""
-    # ✅ Fixed: was org_role not in ["staff", "admin"]
+
     if current_user.default_role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
