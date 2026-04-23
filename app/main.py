@@ -271,50 +271,32 @@ app = FastAPI(lifespan=lifespan)
 # Trust proxy headers (X-Forwarded-For, X-Forwarded-Proto) from Cloud Run load balancer
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 
-# CORS configuration for production
-# Note: For production, specify exact origins instead of ['*'] for better security
-allowed_origins = [
-    "https://themison-mvp-v1.vercel.app",
-    "https://core-frontendv2.vercel.app",
-    "https://core-frontendv2-biobert.vercel.app",
-    "https://core-frontend-v3.vercel.app",
-    "https://core-frontend-v3-improvements.vercel.app",
-    "https://core-frontend-preview.vercel.app",
-    "https://themison-frontend-eu-768873408671.europe-west1.run.app",
-    "http://localhost:8080",
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
+# Configure CORS Origins
+frontend_url_env = os.getenv("FRONTEND_URL", "")
+allowed_origins = [origin.strip().rstrip("/") for origin in frontend_url_env.split(",") if origin.strip()]
 
-# Allow all origins from environment variable if set
-is_allow_all = os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
+# Add default development origins
+if not allowed_origins or "*" not in allowed_origins:
+    dev_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "https://themison-frontend-eu-768873408671.europe-west1.run.app"]
+    for origin in dev_origins:
+        if origin not in allowed_origins:
+            allowed_origins.append(origin)
 
-# Add FRONTEND_URL from environment if set
-frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url:
-    # Robustness: strip trailing slash if present
-    frontend_url = frontend_url.rstrip("/")
-    if frontend_url not in allowed_origins:
-        allowed_origins.append(frontend_url)
-
-# If allow_all is requested, we use a regex to allow everything while still allowing credentials
-if is_allow_all:
-    allowed_origins = []
-    allowed_origin_regex = r".*"
-else:
-    allowed_origin_regex = r"https://.*\.run\.app$"
+# Check for Allow All flag
+if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
+    allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=allowed_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
     max_age=600,
 )
-logging.info(f"CORS initialized. Allow All: {is_allow_all}. Origins: {len(allowed_origins)}")
+logging.info(f"CORS initialized. Origins: {allowed_origins}")
+
 
 
 @app.get("/")
