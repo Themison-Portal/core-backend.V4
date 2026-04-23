@@ -21,6 +21,7 @@ class MemberResponse(MemberBase, TimestampedContract):
     organization_id: UUID
     profile_id: UUID
     invited_by: Optional[UUID] = None
+    is_active: Optional[bool] = None
     # Joined fields from profile
     first_name: Optional[str] = None
     last_name: Optional[str] = None
