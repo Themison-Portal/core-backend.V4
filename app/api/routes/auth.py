@@ -5,6 +5,7 @@ Authentication routes
 from fastapi import APIRouter, Depends, HTTPException
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.themison_admins import ThemisonAdmin
 
 from app.dependencies.auth import get_current_member
 from app.dependencies.db import get_db
@@ -35,12 +36,20 @@ async def get_me(
     from app.models.organizations import Organization
 
     profile = (
-        await db.execute(select(Profile).where(Profile.id == member.profile_id))
-    ).scalars().first()
+        (await db.execute(select(Profile).where(Profile.id == member.profile_id)))
+        .scalars()
+        .first()
+    )
 
     organization = (
-        await db.execute(select(Organization).where(Organization.id == member.organization_id))
-    ).scalars().first()
+        (
+            await db.execute(
+                select(Organization).where(Organization.id == member.organization_id)
+            )
+        )
+        .scalars()
+        .first()
+    )
 
     return {
         "id": str(member.profile_id),
@@ -59,17 +68,23 @@ async def get_me(
             "last_name": profile.last_name if profile else None,
             "email": profile.email if profile else None,
         },
-        "organization": {
-            "id": str(organization.id) if organization else None,
-            "name": organization.name if organization else None,
-            "onboarding_completed": organization.onboarding_completed if organization else None,
-        } if organization else None,
+        "organization": (
+            {
+                "id": str(organization.id) if organization else None,
+                "name": organization.name if organization else None,
+                "onboarding_completed": (
+                    organization.onboarding_completed if organization else None
+                ),
+            }
+            if organization
+            else None
+        ),
     }
+
 
 @router.post("/signup/complete", response_model=SignupCompleteResponse)
 async def signup_complete(
-    payload: SignupCompleteRequest,
-    db: AsyncSession = Depends(get_db)
+    payload: SignupCompleteRequest, db: AsyncSession = Depends(get_db)
 ):
     """
     Finalize signup for an invited user.
@@ -81,17 +96,22 @@ async def signup_complete(
     from sqlalchemy import select
 
     # 1. Validate Invitation
-    result = await db.execute(select(Invitation).where(Invitation.token == payload.token))
+    result = await db.execute(
+        select(Invitation).where(Invitation.token == payload.token)
+    )
     invitation = result.scalars().first()
-    
+
     if not invitation:
         raise HTTPException(status_code=404, detail="Invalid invitation token")
-    
+
     if invitation.status != "pending":
-        raise HTTPException(status_code=400, detail="Invitation already used or expired")
-    
+        raise HTTPException(
+            status_code=400, detail="Invitation already used or expired"
+        )
+
     # Check expiration
     from datetime import timezone
+
     if invitation.expires_at and invitation.expires_at < datetime.now(timezone.utc):
         invitation.status = "expired"
         await db.commit()
@@ -105,14 +125,14 @@ async def signup_complete(
             display_name = f"{payload.first_name} {payload.last_name}"
 
         auth0_user = await auth0_mgmt.create_user(
-            email=invitation.email,
-            password=payload.password,
-            name=display_name
+            email=invitation.email, password=payload.password, name=display_name
         )
         auth0_sub = auth0_user["user_id"]
     except Exception as e:
         logger.error(f"Failed to create Auth0 user: {e}")
-        raise HTTPException(status_code=500, detail=f"Authentication provider error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Authentication provider error: {str(e)}"
+        )
 
     # 3. Create DB Records
     try:
@@ -127,10 +147,10 @@ async def signup_complete(
             id=profile_id,
             email=invitation.email,
             first_name=payload.first_name or inv_first,
-            last_name=payload.last_name or inv_last
+            last_name=payload.last_name or inv_last,
         )
         db.add(new_profile)
-        
+
         # Member
         new_member = Member(
             id=uuid.uuid4(),
@@ -140,23 +160,37 @@ async def signup_complete(
             profile_id=profile_id,
             default_role=invitation.initial_role,
             is_active=True,
-            onboarding_completed=False
+            onboarding_completed=False,
         )
         db.add(new_member)
-        
+
+        # Auto-create themison_admin for staff members
+
+        if invitation.initial_role == "staff":
+
+            new_admin = ThemisonAdmin(
+                email=invitation.email,
+                name=display_name,
+                active=True,
+            )
+        db.add(new_admin)
+
         # 4. Update Invitation
         invitation.status = "accepted"
         from datetime import timezone
+
         invitation.accepted_at = datetime.now(timezone.utc)
-        
+
         await db.commit()
-        
+
         return SignupCompleteResponse(
             success=True,
             message="Signup completed successfully",
-            user_id=str(profile_id)
+            user_id=str(profile_id),
         )
     except Exception as e:
         await db.rollback()
         logger.error(f"Signup DB commit failed: {e}")
-        raise HTTPException(status_code=500, detail="Database error during signup completion")
+        raise HTTPException(
+            status_code=500, detail="Database error during signup completion"
+        )
