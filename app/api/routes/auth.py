@@ -60,7 +60,7 @@ async def get_me(
             "email": member.email,
             "organization_id": str(member.organization_id),
             "default_role": member.default_role,
-            "onboarding_completed": member.onboarding_completed,
+            "onboarding_completed": bool(member.onboarding_completed),
         },
         "profile": {
             "id": str(profile.id) if profile else None,
@@ -72,9 +72,8 @@ async def get_me(
             {
                 "id": str(organization.id) if organization else None,
                 "name": organization.name if organization else None,
-                "onboarding_completed": (
-                    organization.onboarding_completed if organization else None
-                ),
+                "onboarding_completed": bool(organization.onboarding_completed) if organization else False,
+                "support_enabled": bool(organization.support_enabled) if organization else True,
             }
             if organization
             else None
@@ -167,13 +166,12 @@ async def signup_complete(
         # Auto-create themison_admin for staff members
 
         if invitation.initial_role == "staff":
-
             new_admin = ThemisonAdmin(
                 email=invitation.email,
                 name=display_name,
                 active=True,
             )
-        db.add(new_admin)
+            db.add(new_admin)
 
         # 4. Update Invitation
         invitation.status = "accepted"
