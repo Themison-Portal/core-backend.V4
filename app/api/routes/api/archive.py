@@ -41,7 +41,7 @@ async def list_folders(
     result = await db.execute(
         select(ArchiveFolder)
         .where(ArchiveFolder.org_id == org_id)
-        .is_(ArchiveFolder.deleted_at, None)
+        .where(ArchiveFolder.deleted_at, None)
         .order_by(ArchiveFolder.created_at.desc())
     )
     folders = result.scalars().all()
@@ -97,7 +97,7 @@ async def list_saved_responses(
     result = await db.execute(
         select(SavedResponse)
         .where(SavedResponse.folder_id == folder_id)
-        .is_(SavedResponse.deleted_at, None)
+        .where(SavedResponse.deleted_at, None)
         .order_by(SavedResponse.created_at.desc())
     )
     responses = result.scalars().all()
