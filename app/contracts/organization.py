@@ -16,8 +16,8 @@ class OrganizationBase(BaseContract):
 
 class OrganizationResponse(OrganizationBase, TimestampedContract):
     id: UUID
-    created_by: UUID
-    support_enabled: bool
+    created_by: Optional[UUID] = None
+    support_enabled: Optional[bool] = True
 
 
 class OrganizationUpdate(BaseContract):
