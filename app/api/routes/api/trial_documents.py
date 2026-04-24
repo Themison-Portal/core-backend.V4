@@ -2,6 +2,7 @@
 Trial document routes — GET /, GET /{id}, POST /upload, PUT /{id}, DELETE /{id}
 """
 
+import logging
 from typing import List, Optional
 from uuid import UUID
 
@@ -19,6 +20,8 @@ from app.models.trials import Trial
 from app.services.crud import CRUDBase
 from app.services.storage.base import StorageService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -28,6 +31,12 @@ async def list_trial_documents(
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    List documents for a trial. Returns metadata only.
+    `document_url` is the raw GCS blob path; the FE must call
+    `GET /{document_id}/download-url` to obtain a signed HTTPS URL when it
+    needs to actually open/download the file.
+    """
     crud = CRUDBase(Document, db)
     filters = {}
     if trial_id:
@@ -41,11 +50,54 @@ async def get_trial_document(
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Get a single document's metadata. `document_url` is a raw GCS blob path —
+    use `GET /{document_id}/download-url` for an HTTPS URL.
+    """
     crud = CRUDBase(Document, db)
     doc = await crud.get(document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
+
+
+@router.get("/{document_id}/download-url")
+async def get_document_download_url(
+    document_id: UUID,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+):
+    """
+    Return a fresh, short-lived HTTPS URL the FE can pass to a PDF viewer.
+
+    Sign-on-demand keeps the leak window short (1h) and avoids re-signing every
+    document on every list call. The FE should call this endpoint immediately
+    before opening the viewer; if the viewer stays open longer than 1h and the
+    URL 401/403s, refetch.
+    """
+    crud = CRUDBase(Document, db)
+    doc = await crud.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not doc.document_url:
+        raise HTTPException(status_code=404, detail="Document has no file attached")
+
+    if doc.document_url.startswith(("http://", "https://")):
+        # Already an absolute URL (e.g., LocalStorageService in dev)
+        url = doc.document_url
+    else:
+        try:
+            url = storage.get_signed_url(
+                get_settings().gcs_bucket_trial_documents,
+                doc.document_url,
+                expiration_hours=1,
+            )
+        except Exception as e:
+            logger.exception(f"Failed to sign URL for document {document_id}: {e}")
+            raise HTTPException(status_code=500, detail="Failed to generate download URL")
+
+    return {"url": url, "expires_in_seconds": 3600}
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=201)
