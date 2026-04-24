@@ -1,7 +1,8 @@
 from datetime import datetime
-from sqlalchemy import Column, String, ForeignKey, DateTime
+from sqlalchemy import Column, String, ForeignKey, DateTime, JSON
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
+
 
 from .base import Base
 
@@ -23,7 +24,7 @@ class SavedResponse(Base):
     title = Column(String, nullable=False)
     question = Column(String, nullable=True)
     answer = Column(String, nullable=True)
-    raw_data = Column(String, nullable=True)
+    raw_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)

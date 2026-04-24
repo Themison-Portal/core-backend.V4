@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from typing import Any
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -38,14 +39,14 @@ class SavedResponseCreate(BaseModel):
     title: str
     question: Optional[str]
     answer: Optional[str]
-    raw_data: Optional[str]
+    raw_data: Optional[Any] = None
 
 
 class SavedResponseUpdate(BaseModel):
     title: Optional[str]
     question: Optional[str]
     answer: Optional[str]
-    raw_data: Optional[str]
+    raw_data: Optional[Any] = None
 
 
 class SavedResponseResponse(BaseModel):
@@ -58,7 +59,7 @@ class SavedResponseResponse(BaseModel):
     title: str
     question: Optional[str]
     answer: Optional[str]
-    raw_data: Optional[str]
+    raw_data: Optional[Any] = None
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime]
