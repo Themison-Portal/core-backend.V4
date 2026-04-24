@@ -2,12 +2,10 @@
 Storage routes — upload, download, delete files via GCS.
 """
 
-from uuid import UUID
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from app.config import get_settings
-from app.contracts.storage import DownloadUrlResponse, UploadResponse
+from app.contracts.storage import UploadResponse
 from app.dependencies.auth import get_current_member
 from app.dependencies.storage import get_storage_service
 from app.models.members import Member
@@ -42,26 +40,8 @@ async def upload_file(
     return result
 
 
-@router.get("/download/{document_id}", response_model=DownloadUrlResponse)
-async def download_file(
-    document_id: UUID,
-    member: Member = Depends(get_current_member),
-    storage: StorageService = Depends(get_storage_service),
-):
-    """Return a signed download URL for a given document_id.
-
-    For now, this looks up the trial_documents table by ID and generates a
-    signed URL from the stored ``document_url`` (which contains the blob path).
-    """
-    from sqlalchemy import select
-    from app.dependencies.db import get_db
-    from app.models.documents import Document
-
-    # We need a db session — obtain manually since this is a simple lookup
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Full download implementation pending document path resolution",
-    )
+# Removed: GET /storage/download/{document_id} stub — superseded by
+# GET /api/trial-documents/{document_id}/download-url (with trial-access auth).
 
 
 @router.delete("/{path:path}", status_code=204)

@@ -15,3 +15,9 @@ class UploadResponse(BaseContract):
 
 class DownloadUrlResponse(BaseContract):
     signed_url: str
+
+
+class DocumentDownloadUrlResponse(BaseContract):
+    """Response from GET /api/trial-documents/{document_id}/download-url."""
+    url: str
+    expires_in_seconds: int
