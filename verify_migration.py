@@ -3,8 +3,15 @@ import asyncpg
 import os
 
 async def main():
-    # Use the public IP from the gcloud check
-    db_url = "postgresql://postgres:postgres@34.77.93.209:5432/postgres"
+    from dotenv import load_dotenv
+    load_dotenv()
+    
+    # Use DATABASE_URL from .env (fallback to the tunnel address)
+    db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/postgres")
+    
+    # asyncpg expects postgresql:// (not postgresql+asyncpg://)
+    db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+    
     print(f"Connecting to {db_url}...")
     try:
         conn = await asyncpg.connect(db_url)

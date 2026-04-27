@@ -276,32 +276,60 @@ frontend_url_env = os.getenv("FRONTEND_URL", "")
 allowed_origins = [origin.strip().rstrip("/") for origin in frontend_url_env.split(",") if origin.strip()]
 
 # Add default development origins
-if not allowed_origins or "*" not in allowed_origins:
-    dev_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "https://themison-frontend-eu-768873408671.europe-west1.run.app"]
-    for origin in dev_origins:
-        if origin not in allowed_origins:
-            allowed_origins.append(origin)
+dev_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "https://themison-frontend-eu-768873408671.europe-west1.run.app"]
+for origin in dev_origins:
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
 
-# Check for Allow All flag
-if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
-    allowed_origins = ["*"]
+# Define regex for custom themison domains (supports any subdomain)
+themison_regex = r"https?://([a-z0-9-]+\.)?themison\.(app|com|io|org|run\.app)"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
-    max_age=600,
-)
-logging.info(f"CORS initialized. Origins: {allowed_origins}")
+allow_all = os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
+
+if allow_all:
+    # Custom Middleware to mirror Origin header for CORS
+    # This allows credentials with ANY origin, which is what ALLOW_ALL_ORIGINS implies
+    from fastapi import Request
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.responses import Response
+
+    class DynamicCORSMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            if request.method == "OPTIONS":
+                response = Response()
+            else:
+                response = await call_next(request)
+            
+            origin = request.headers.get("Origin")
+            if origin:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, Origin, X-Requested-With, X-API-KEY, X-Job-ID, X-Document-ID"
+                response.headers["Access-Control-Expose-Headers"] = "Content-Length, X-Job-ID, X-Document-ID"
+            
+            return response
+
+    app.add_middleware(DynamicCORSMiddleware)
+    logging.info("Dynamic CORS initialized (Allow All Origins enabled).")
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_origin_regex=themison_regex,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-API-KEY", "X-Job-ID", "X-Document-ID"],
+        expose_headers=["Content-Length", "X-Job-ID", "X-Document-ID"],
+        max_age=600,
+    )
+    logging.info(f"CORS initialized with allowed origins and dynamic regex for Themison domains.")
 
 
 
 @app.get("/")
 def root():
-    return {"status": "ok", "version": "4.0.2-CORS-FORCE", "message": "Themison Backend API"}
+    return {"status": "ok", "version": "4.1.1-AUTH-CORS-FIX", "message": "Themison Backend API"}
 
 
 @app.get("/health")
@@ -360,7 +388,7 @@ async def debug_config():
             }
         },
         "config_details": {
-            "VERSION": "4.0.2-CORS-FORCE",
+            "VERSION": "4.0.3-GCS-CORS-FIX",
             "USE_GRPC": os.getenv("USE_GRPC_RAG", "false").lower() == "true",
             "ALLOW_ALL_ORIGINS": os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
         }

@@ -103,8 +103,9 @@ async def update_message(
     if not msg:
         raise HTTPException(status_code=404, detail="Chat message not found")
 
-    # Optional: Only author or admin can update
-    if msg.user_id != member.id and member.default_role not in ["admin", "staff"]:
+    # Ownership check via session
+    session = (await db.execute(select(ChatSession).where(ChatSession.id == msg.session_id))).scalars().first()
+    if not session or (session.user_id != member.profile_id and member.default_role not in ["admin", "staff"]):
         raise HTTPException(
             status_code=403, detail="Not authorized to update this message"
         )
@@ -142,8 +143,9 @@ async def delete_message(
     if not msg:
         raise HTTPException(status_code=404, detail="Chat message not found")
 
-    # Optional: Only author or admin can delete
-    if msg.user_id != member.id and member.default_role not in ["admin", "staff"]:
+    # Ownership check via session
+    session = (await db.execute(select(ChatSession).where(ChatSession.id == msg.session_id))).scalars().first()
+    if not session or (session.user_id != member.profile_id and member.default_role not in ["admin", "staff"]):
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this message"
         )
