@@ -72,8 +72,12 @@ async def get_me(
             {
                 "id": str(organization.id) if organization else None,
                 "name": organization.name if organization else None,
-                "onboarding_completed": bool(organization.onboarding_completed) if organization else False,
-                "support_enabled": bool(organization.support_enabled) if organization else True,
+                "onboarding_completed": (
+                    bool(organization.onboarding_completed) if organization else False
+                ),
+                "support_enabled": (
+                    bool(organization.support_enabled) if organization else True
+                ),
             }
             if organization
             else None
@@ -131,6 +135,23 @@ async def signup_complete(
         logger.error(f"Failed to create Auth0 user: {e}")
         raise HTTPException(
             status_code=500, detail=f"Authentication provider error: {str(e)}"
+        )
+    # Check if member already exists
+    existing_member = (
+        (await db.execute(select(Member).where(Member.email == invitation.email)))
+        .scalars()
+        .first()
+    )
+
+    if existing_member:
+        # Member already exists — just mark invitation as accepted
+        invitation.status = "accepted"
+        invitation.accepted_at = datetime.now(timezone.utc)
+        await db.commit()
+        return SignupCompleteResponse(
+            success=True,
+            message="Signup completed successfully",
+            user_id=str(existing_member.profile_id),
         )
 
     # 3. Create DB Records
