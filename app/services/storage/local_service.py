@@ -20,8 +20,16 @@ UPLOADS_ROOT = Path("uploads")
 class LocalStorageService(StorageService):
     """Stores files on the local filesystem and returns HTTP URLs."""
 
-    def __init__(self, base_url: str = "http://localhost:8000") -> None:
-        self._base_url = base_url.rstrip("/")
+    def __init__(self, base_url: str | None = None) -> None:
+        # Default to the same port the FastAPI app listens on. Overridable
+        # via LOCAL_STORAGE_BASE_URL so deployments that expose the API
+        # on a different host:port (or behind a reverse proxy) still
+        # generate fetchable URLs for the RAG service.
+        import os
+        resolved = base_url or os.environ.get(
+            "LOCAL_STORAGE_BASE_URL", "http://localhost:8080"
+        )
+        self._base_url = resolved.rstrip("/")
         UPLOADS_ROOT.mkdir(parents=True, exist_ok=True)
 
     def upload_file(

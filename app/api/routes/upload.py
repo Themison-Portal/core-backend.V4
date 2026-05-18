@@ -88,10 +88,11 @@ async def _run_ingestion_task(
             logger.info(f"Resolved GCS blob path to signed URL for job {job_id}")
 
         if use_grpc:
-            # In Docker, the rag-service can't reach localhost:8000 (the backend).
-            # Translate to the Docker-internal hostname so it resolves correctly.
+            # In Docker, the rag-service can't reach localhost:8080 (the backend
+            # from the host's perspective). Translate to the Docker-internal
+            # hostname so it resolves correctly.
             # GCS signed URLs (https://storage.googleapis.com/...) are unaffected.
-            grpc_url = document_url.replace("localhost:8000", "backend:8000")
+            grpc_url = document_url.replace("localhost:8080", "backend:8080")
 
             # gRPC path - stream progress from RAG service
             await _ingest_via_grpc(
